@@ -1,0 +1,167 @@
+\documentclass{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{proof}
+\usepackage{stmaryrd}
+%\usepackage{MnSymbol}
+\usepackage{parskip}
+\usepackage{fullpage}
+\usepackage{mathpartir}
+\usepackage{subcaption}
+\usepackage{float}
+
+
+\begin{document}
+
+\include{definitions}
+
+\title{Proposal for Basing Bend2 on W-Types}
+
+\author{Aaron Stump}
+
+\maketitle
+
+\section{Bend2's Philosophy}
+
+Bend2 is based on a novel proposal (as far as I know) for how to
+design a type theory, which is a form of pure functional programming
+language that can also be viewed as a logic.  To be sound as a logic,
+the language should not allow one to prove False.
+
+There are two current traditions for devising type theories, that
+should be mentioned for comparison with Bend2's approach:
+
+\begin{enumerate}
+\item \textbf{Church-style} type theory builds up a notion of typed
+  terms (programs), where the types are inherent to those terms.  By a
+  difficult argument, one shows that all well-typed programs
+  terminate.  So the type system is enforcing termination, in addition
+  to other properties usually enforced by static typing.  From
+  termination, it is then easy to argue that the system is logically
+  sound.  This is because it is relatively easy to show that values,
+  which are the final results of computation, cannot have type False.
+
+\item \textbf{Curry-style} type theory starts with a notion of
+  type-free program, and then adds types to describe properties of the
+  behavior of programs.  For example, the identity function can be
+  described as having type $X \to X$ for any type $X$, as it is
+  guaranteed to take an input of type $X$ and return an output of type
+  $X$ (namely, the input it was given).  A difficult argument is still
+  required to show that typing enforces termination.  But the language
+  design is made quite a bit easier by not having types be inherent
+  parts of programs.  This is because in reasoning about programs,
+  one does not then have to reason about types inside them.  Programs
+  are type-free, and typing comes second.  In fact, the slogan I propose
+  for this style of type theory is ``Computation First'' (because we
+  first explain what type-free programs are and how they execute, and
+  only afterwards use types to describe their properties).
+\end{enumerate}
+
+Bend2's philosophy can be viewed as a strengthened form of Curry-style
+type theory, with the modified slogan: ``Terminating Computation
+First''.  The idea, proposed by Victor Taelin, is similar to
+Curry-style type theory, where one first defines type-free programs,
+and how they compute.  But differently, these programs are designed so
+that they are guaranteed to terminate, without reference to any notion
+of typing.  Just the structure of the programs and the rules for how
+the execute are sufficient to establish that all programs terminate.
+Giving a detailed proof of that fact is still not trivial, but
+expected to be much simpler than the approaches based on typing.  And
+then one has a lot of freedom to design a type system on top of the
+terminating type-free language.  Now the only requirement is that the
+language should have the usual type-safety property that ones expects
+of any statically typed programming language. This is vastly easier to
+achieve than crafting a type system that enforces termination.
+
+\section{Bend2's notion of terminating type-free programs}
+
+As it exists currently, Bend2's terminating language is based on a
+notion of sizes of values, where values are built from tuples
+(including the empty tuple, which is just the unit value familiar from
+other functional programming) using labels.  A list, for example, is
+just a nested tuple with labels through the nesting that indicate
+whether the tuple represents an empty list (and hence has no more
+data), or adding an element to the head of another list (which is then
+contained inside this tuple).  Terminating recursions operating on
+such data just need to be structurally recursive: all recursive calls
+should happen on subdata of the input.  Anonymous functions are
+restricted to being \emph{affine}, which means they may use their
+inputs either one time or not at all.  These restrictions individually
+are well-known to enforce termination of type-free programs, and in
+combination they should continue to enforce termination (this may be
+known, but I am not aware of a proof).
+
+This representation of data as nested tuples is appealingly simple.
+It does have the drawback that data need to have a finite size.  In
+type theory, however, it is common to work with data structures that
+are infinitely branching, but where each branch is finite.  Such
+structures do not have a finite size.  One can extend finite sizes to
+the ordinals, and then cover such cases.  In fact, ordinals are a
+classic (if theoretically motivated) example of such a datatype:
+
+\begin{verbatim}
+data Ord = Zero | Succ | Lim (Nat -> Ord)
+\end{verbatim}
+
+\noindent The \verb|Lim| constructor has an infinite number of
+subtrees, one for each natural number.  This infinite set of subtrees
+is represented by having \verb|Lim| accept a function (call it
+\verb|f|) from \verb|Nat| to \verb|Ord|.  Given natural number
+\verb|i|, the function \verb|f| returns the \verb|i|'th subtree.
+
+Basing a test for structural decrease of programs using ordinals might
+be possible, but I do not know of an example of this.  It would
+require defining some suitable class of ordinals, and then testing
+functions for decrease with respect to that class.  I am not sure how
+one would be able to do that in a type-free way, as I am not sure how
+one would check, just by seeing how code is manipulating part of a
+data structure, that the ordinal measure of the entire data structure
+is being decreased.
+
+\section{W-types for general structurally terminating recursion}
+
+An alternative -- which might possibly be viewed as the correct way of
+achieving some kind of implicit form of ordinal decrease as just
+described -- is to use so-called W-types, proposed by the great type
+theorist Per Martin-L\"of (see~\cite[Chapter 15]{mlttprog} for an
+introduction).  Of course, with Bend2's strengthened Curry-style
+philosophy, we begin not with the types of this proposal, but just the
+type-free programs.  There are two constructs, one for constructing
+values, and the other for recursing over them.
+
+\subsection{Construction and recursion}
+
+A construction consists of a \emph{label} $l$ and then a function $f$
+producing the subdata.  Each input to $f$ is like a name or index for
+a piece of subdata, and given that name, $f$ returns the corresponding
+subdata.  So for the example above of \verb|Lim| for ordinals, the
+name would be a natural number $i$, and the subdata would be the
+$i$'th ordinal contained in that limit ordinal.  Let us write
+$\ctor{l}{f}$ for this construction with label $l$ and function $f$.
+So it is effectively a pair, but the second argument is always a
+function.
+
+To recurse over such a value, we write a function $R$ which takes the
+label $l$, the function $f$, and also a function $r$ that returns
+recursive results.  $R$ then returns a result, generally by calling
+$r$ to obtain results recursively.  For each possible input to $f$,
+the function $r$ returns the result of recursing on the subdata
+$f\ i$; that is, the $i$'th piece of subdata.  The recursor itself
+takes in $R$ and a piece $d$ of data, decomposes that data into $l$ and $f$,
+and then invokes $r$.  In more detail, let us write $\wrec{R}{d}$
+for this.  Then the computation rule is:
+
+\[
+\wrec{R}{\ctor{l}{f}} \ \ = \ \ R\ l\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\]
+
+\section{Examples}
+
+\section{Adding types}
+
+\bibliographystyle{plain}
+\bibliography{main}
+
+\end{document}
