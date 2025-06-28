@@ -157,7 +157,44 @@ for this.  Then the computation rule is:
 \wrec{R}{\ctor{l}{f}} \ \ = \ \ R\ l\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
 \]
 
+\noindent We can see this in action through an example.
+
 \section{Examples}
+
+Here are a couple examples of standard datatypes, represented using
+this approach.  The examples presuppose a set of labels of the form
+``\textsf{@name}'', together with a basic (termination-preserving)
+function $\{\textsf{@name}_1 \mapsto t_1\ ;\ \cdots \textsf{@name}_k
+\mapsto t_k\}$, which maps input label $\textsf{@name}_i$ to $t_i$,
+and is undefined if applied to any label not listed.  Later, the type
+system can make sure such functions are always called with a label
+from the list.  Also, to serve as a base case for constructions,
+assuming we have a unit value $\wunit$.
+
+\subsection{Natural numbers}
+
+We can encode zero and successor as follows:
+
+\[
+\begin{array}{lll}
+  \textit{Zero} & := & \ctor{\mathsf{@zero}}{\lam{x}{\wunit}} \\
+  \textit{Succ} & := & \lam{n}{\ctor{\mathsf{@succ}}{\lam{x}{n}}}
+\end{array}
+\]
+
+\noindent Now to recurse on natural numbers, we could either directly use the recursor for W-types defined above,
+or we can write a recursor $R$ specifically for natural numbers using that W-type recursor:
+\[
+\textit{R}_{\textit{Nat}} := \lam{s}{\lam{z}{\lam{n}{\wrec{\{\textsf{@zero} \mapsto \lam{p}{\lam{r}{z}}\ ;\ \textsf{@succ} \mapsto \lam{p}{\lam{r}{s\ (p\ \wunit)\ (r\ \wunit)}}\}}{n}}}}
+\]
+\noindent Given a function $s$ to apply in the case the input $n$ is a successor, and a value to return if $n$ is zero, this
+term applies the W-type recursor on the value $n$, with a function that takes action based on the label:
+\begin{itemize}
+  \item If the label is \textsf{@zero}, then the function needs to
+    take in arguments $p$ and $r$, which are the subdata function and the
+    recursion function for those subdata.  All cases with the W-type recursor do this.  Here, in the \textsf{@zero} case,
+    the subdata function and recursion function are both unused, because \textit{Zero} has no subdata.
+\end{itemize}
 
 \section{Adding types}
 
