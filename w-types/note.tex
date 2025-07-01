@@ -146,18 +146,25 @@ function.
 To recurse over such a value, we write a function $R$ which takes the
 label $l$, the function $f$, and also a function $r$ that returns
 recursive results.  $R$ then returns a result, generally by calling
-$r$ to obtain results recursively.  For each possible input to $f$,
-the function $r$ returns the result of recursing on the subdata
-$f\ i$; that is, the $i$'th piece of subdata.  The recursor itself
-takes in $R$ and a piece $d$ of data, decomposes that data into $l$ and $f$,
-and then invokes $r$.  In more detail, let us write $\wrec{R}{d}$
-for this.  Then the computation rule is:
+$r$.  For each possible input to $f$, the function $r$ returns the
+result of recursing on the subdata $f\ i$; that is, the $i$'th piece
+of subdata.  The recursor itself takes in $R$ and a piece $d$ of data,
+decomposes that data into $l$ and $f$, and then invokes $r$.  In more
+detail, let us write $\wrec{R}{d}$ for this.  Then the computation
+rule is:
 
 \[
 \wrec{R}{\ctor{l}{f}} \ \ = \ \ R\ l\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
 \]
 
-\noindent We can see this in action through an example.
+\noindent So someone using the recursor writes $R$, and then for each
+piece of data $\ctor{l}{f}$, that function $R$ will be invoked with
+the label $l$, and the function $f$, which $R$ can then call as needed
+to obtain subdata.  The third argument to $R$ is the value that $R$
+will use for $r$, namely $\lam{x}{\wrec{R}{(f\ x)}}$.  That function
+takes in an index $x$, and recursively invokes the recursor on the
+$x$'th piece of subdata, given by $f\ x$.  We can see this in action
+through an example.
 
 \section{Examples}
 
@@ -182,19 +189,51 @@ We can encode zero and successor as follows:
 \end{array}
 \]
 
-\noindent Now to recurse on natural numbers, we could either directly use the recursor for W-types defined above,
-or we can write a recursor $R$ specifically for natural numbers using that W-type recursor:
+\noindent So for example, the term $\textit{Succ}\ (\textit{Succ}\ \textit{Zero})$
+normalizes to
 \[
-\textit{R}_{\textit{Nat}} := \lam{s}{\lam{z}{\lam{n}{\wrec{\{\textsf{@zero} \mapsto \lam{p}{\lam{r}{z}}\ ;\ \textsf{@succ} \mapsto \lam{p}{\lam{r}{s\ (p\ \wunit)\ (r\ \wunit)}}\}}{n}}}}
+\ctor{\mathsf{@succ}}{\lam{x}{\ctor{\mathsf{@succ}}{\lam{x}{\ctor{\mathsf{@zero}}{\lam{x}{\wunit}}}}}}
 \]
-\noindent Given a function $s$ to apply in the case the input $n$ is a successor, and a value to return if $n$ is zero, this
-term applies the W-type recursor on the value $n$, with a function that takes action based on the label:
+\noindent This is not very different from an encoding using just labels and tuples, which would
+be
+\[
+\ctor{\mathsf{@succ}}{\ctor{\mathsf{@succ}}{\ctor{\mathsf{@zero}}{\wunit}}}
+\]
+\noindent The encoding with W-types has additional lambda abstractions throughout the value, which
+the encoding with labels and tuples lack.
+
+Now to recurse on natural numbers, we could either directly use the recursor for W-types defined above,
+or we can derive a recursor $\rrec$ specifically for natural numbers using the recursor for W-types:
+\[
+\rrec := \lam{s}{\lam{z}{\lam{n}{\wrec{\{\textsf{@zero} \mapsto \lam{p}{\lam{r}{z}}\ ;\ \textsf{@succ} \mapsto \lam{p}{\lam{r}{s\ (p\ \wunit)\ (r\ \wunit)}}\}}{n}}}}
+\]
+\noindent Given a function $s$ to apply when the input $n$ is a successor, and a value to return if $n$ is zero, this
+term applies the W-type recursor on the value $n$, with a function that takes action based on the label.  In both
+cases, the function takes inputs $p$ and $r$, where $p$ is a function returning the predecessor number if the number is non-zero, and
+$r$ is a function returning the result of recursion on that value (again, if the number is non-zero).
 \begin{itemize}
-  \item If the label is \textsf{@zero}, then the function needs to
-    take in arguments $p$ and $r$, which are the subdata function and the
-    recursion function for those subdata.  All cases with the W-type recursor do this.  Here, in the \textsf{@zero} case,
-    the subdata function and recursion function are both unused, because \textit{Zero} has no subdata.
+\item If the label is \textsf{@zero}, then the subdata function and recursion function are both unused, because
+  \textit{Zero} has no subdata.  The function just
+    returns $z$ in this case.
+  \item If the label is \textsf{@succ}, then the function calls $s$ on
+    the predecessor and the result of recursion for the predecessor.
+    Those values are obtained by calling $p$ and $r$, respectively,
+    with $\wunit$ as input.  Actually, in the type-free setting, it
+    does not matter what input is used, as $p$ and $r$ are both
+    constant functions, which discard their inputs.
 \end{itemize}
+
+Using $\mathsf{R}_{\textit{Nat}}$, one may then define the usual arithmetic functions in a standard way.  For example, addition may be defined as:
+\[
+\textit{add}\ :=\ \lam{x}{\lam{y}{\rrec\ (\lam{p}{\textit{Succ}})\ y\ x}}
+\]
+\noindent This definition uses $\rrec$ to iterate the successor function -- well, actually a function which first discards the predecessor,
+which $\rrec$ always supplies when invoking the step case of the recursion -- starting with $y$.  And since we are writing recursors here
+instead of iterators, we can write a constant-time predecessor function:
+\[
+\textit{pred}\ :=\ \rrec\ (\lam{p}{\lam{r}{p}})\ \textit{Zero}
+\]
+\noindent The predecessor $p$ is given to the step case of the recursion, which returns it.
 
 \section{Adding types}
 
