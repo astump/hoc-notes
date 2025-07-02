@@ -207,7 +207,7 @@ or we can derive a recursor $\rrec$ specifically for natural numbers using the r
 \[
 \rrec := \lam{s}{\lam{z}{\lam{n}{\wrec{\{\textsf{@zero} \mapsto \lam{p}{\lam{r}{z}}\ ;\ \textsf{@succ} \mapsto \lam{p}{\lam{r}{s\ (p\ \wunit)\ (r\ \wunit)}}\}}{n}}}}
 \]
-\noindent Given a function $s$ to apply when the input $n$ is a successor, and a value to return if $n$ is zero, this
+\noindent Given a function $s$ to apply when the input $n$ is a successor, and a value $z$ to return if $n$ is zero, this
 term applies the W-type recursor on the value $n$, with a function that takes action based on the label.  In both
 cases, the function takes inputs $p$ and $r$, where $p$ is a function returning the predecessor number if the number is non-zero, and
 $r$ is a function returning the result of recursion on that value (again, if the number is non-zero).
