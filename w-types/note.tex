@@ -235,6 +235,90 @@ instead of iterators, we can write a constant-time predecessor function:
 \]
 \noindent The predecessor $p$ is given to the step case of the recursion, which returns it.
 
+\subsection{Ordinals}
+
+The example of ordinals given above can be implemented using W-types.  Here are definitions of the three constructors:
+\[
+\begin{array}{lll}
+  \textit{Zero} & := & \ctor{\mathsf{@zero}}{\lam{x}{\wunit}} \\
+  \textit{Succ} & := & \lam{n}{\ctor{\mathsf{@succ}}{\lam{x}{n}}} \\
+  \textit{Lim} & := & \lam{f}{\ctor{\mathsf{@lim}}{f}}
+\end{array}
+\]
+\noindent While we are still type-free here, intuitively, \textit{Lim} is taking in a function from $\textit{Nat}$ to $\textit{Ord}$, and
+installing that function as the second component of the construction labeled \textsf{@lim}.  This means that we can obtain the $i$'th smaller
+ordinal from a limit ordinal just by calling that function $f$ with $i$.
+
+Using this definition, we can define ordinal addition:
+\[
+\begin{array}{lll}
+  \textit{add} & := & \lam{n}{\lam{m}{\ }} \\
+  \ & \ & \ \ \ \ \ \{\mathsf{@zero} \mapsto \lam{p}{\lam{r}{n}} ;  \\
+  \ & \ & \ \ \ \ \ \ \, \mathsf{@succ} \mapsto \lam{p}{\lam{r}{\textit{Succ}\ (r\ \wunit)}}; \\
+  \ & \ & \ \ \ \ \ \ \, \mathsf{@lim} \mapsto \lam{p}{\lam{r}{\textit{Lim}\ r}} \}\ \bullet\ m
+\end{array}
+\]
+\noindent This definition works, because in the \textsf{@lim} case,
+the function $r$ will add the $i$'th sub-ordinal of the limit, to $m$.
+But this is exactly what we want to take the limit of, and so we just
+write $\textit{Lim}\ r$.  So W-types can support ordinal arithmetic.
+Proving theorems about such operations is involved, however, and there
+is quite a bit that can be studied about constructive theories of
+ordinals~\cite{kraus23}.  Here, the point is just to demonstrate
+terminating recursion with a generalized inductive datatype (one
+where values might not have finite sizes).
+
+\subsection{Pairs}
+
+There are several ways one could implement construction of pairs $(x,y)$. In the context of affine typing, it might be
+best just to lambda-encode these:
+\[
+\begin{array}{lll}
+  (x,y) & := & \lam{c}{c\ x\ y}
+\end{array}
+\]
+\noindent This would allow an affine way to decompose the pair.  One
+could also add pairs with pattern-matching \emph{let} as primitive.
+Finally, one could define pairs with W-types this way:
+\[
+\begin{array}{lll}
+  (x,y) & := & \ctor{\wunit}{\{\mathsf{@fst} \mapsto x;\ \mathsf{@snd} \mapsto y\}} \\
+  \textit{fst} & := & \lam{p}{\wrec{(\lam{l}{\lam{f}{f\ \mathsf{@fst}}})}{p}} \\
+  \textit{snd} & := & \lam{p}{\wrec{(\lam{l}{\lam{f}{f\ \mathsf{@snd}}})}{p}} 
+\end{array}
+\]
+\noindent To extract the first value from a pair $\ctor{\wunit}{f}$,
+you call $f\ \mathsf{@fst}$, and similarly $f\ \mathsf{@snd}$ for the
+second value.  But then you cannot get both components of the pair
+in an affine way.
+
+\subsection{Lists and non-recursive subdata}
+
+The datatype of lists is famously similar to $\textit{Nat}$.  Both
+have a non-recursive constructor, namely \textit{Nil} for
+\textit{List} and \textit{Zero} for \textit{Nat}; as well as a
+recursive constructor, namely \textit{Cons} for \textit{List} and
+\textit{Succ} for \textit{Nat}.  The sole difference is that for
+lists, the recursive constructor takes extra data of some type $A$.
+This results in a type $\textit{List}\ A$ of lists storing values of
+type $A$.
+
+%% The representation of lists with W-types is slightly annoying, because
+%% the non-recursive data is included in the label of the construction.
+%% To prepend head $h$ to tail $t$, the code is:
+%% \[
+%% \textit{Cons}\ :=\ \lam{h}{\lam{t}{\ctor{(\mathsf{@cons},h)}{\lam{x}{t}}}}
+%% \]
+%% \noindent For uniformity (so that given a list of unknown form, we can find the label telling
+%% whether it is a \textsf{@cons} or a \textsf{@nil}), one then needs
+%% \[
+%% \textit{Nil}\ :=\ \ctor{(\mathsf{@nil},\wunit)}{\lam{x}{\wunit}}
+%% \]
+%% \noindent This is a little clunky, because then a function like append needs to dig in a level to the label part of the construction,
+%% to find out which case should be applied:
+%\[
+%\textit{append}\ :=\ \lam{x}{\lam{y}{\wrec{\lam{l}{\lam{p}{\lam{r}{\{ \mathsf{@cons} \mapsto 
+
 \section{Adding types}
 
 \bibliographystyle{plain}
