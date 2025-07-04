@@ -292,6 +292,14 @@ you call $f\ \mathsf{@fst}$, and similarly $f\ \mathsf{@snd}$ for the
 second value.  But then you cannot get both components of the pair
 in an affine way.
 
+For examples below, I will assume we have a function \textit{open}
+with the following computation rule:
+\[
+\textit{open}\ (x,y)\ f = f\ x\ y
+\]
+\noindent It is trivial to implement \textit{open} using lambda-encoded
+pairs, as I am proposing.
+
 \subsection{Lists and non-recursive subdata}
 
 The datatype of lists is famously similar to $\textit{Nat}$.  Both
@@ -303,23 +311,52 @@ lists, the recursive constructor takes extra data of some type $A$.
 This results in a type $\textit{List}\ A$ of lists storing values of
 type $A$.
 
-\textbf{more to come here}
+The standard representation of lists with W-types is slightly annoying, because
+the non-recursive data is included in the label of the construction.
+To prepend head $h$ to tail $t$, the code is:
+\[
+\textit{Cons}\ :=\ \lam{h}{\lam{t}{\ctor{(\mathsf{@cons},h)}{\lam{x}{t}}}}
+\]
+\noindent So the head $h$ of the list is stored in the first component
+of the W-type construction, along with the \textsf{@cons} label.  For
+uniformity (so that given a list of unknown form, we can find the
+label telling whether it is a \textsf{@cons} or a \textsf{@nil}), one
+then needs the label to be a pair also in the nil case:
+\[
+\textit{Nil}\ :=\ \ctor{(\mathsf{@nil},\wunit)}{\lam{x}{\wunit}}
+\]
+\noindent We just store some trivial data $\wunit$ in the label, along with \textsf{@nil}.
+This is a little clunky, because then a function like append needs to dig in a level to the label part of the construction,
+to find out which case should be applied:
+\[
+\textit{append}\ :=\ \lam{x}{\lam{y}{\wrec{(\lam{q}{\lam{p}{\lam{r}{\textit{open}\ q\ (\lam{l}{\lam{d}{\{ \mathsf{@cons}\mapsto \textit{Cons}\ d\ (r\ \wunit); \mathsf{@nil}\mapsto y\}\ l}})}}})}{x}}}
+\]
+\noindent This function takes in two lists $x$ and $y$, and then uses the W-type recursor to recurse on $x$.  The first part (to the left of the $\bullet$ symbol) of the W-type recursor takes in the label $q$, subdata function $p$, and recursion function $r$, and then opens the label $q$ to see what kind of list we have.  When we open $q$, we will get a label $l$ (either \textsf{@cons} or \textsf{@nil}), and a piece of non-recursive data $d$.  In the \textsf{@cons} case, this $d$ is the head of the input list, which we use to rebuild the list around the result $r\ \wunit$ of recursing on the tail of the input list.  In the \textsf{@nil} case, of course, we just return the second list $y$.
 
-%% The representation of lists with W-types is slightly annoying, because
-%% the non-recursive data is included in the label of the construction.
-%% To prepend head $h$ to tail $t$, the code is:
-%% \[
-%% \textit{Cons}\ :=\ \lam{h}{\lam{t}{\ctor{(\mathsf{@cons},h)}{\lam{x}{t}}}}
-%% \]
-%% \noindent For uniformity (so that given a list of unknown form, we can find the label telling
-%% whether it is a \textsf{@cons} or a \textsf{@nil}), one then needs
-%% \[
-%% \textit{Nil}\ :=\ \ctor{(\mathsf{@nil},\wunit)}{\lam{x}{\wunit}}
-%% \]
-%% \noindent This is a little clunky, because then a function like append needs to dig in a level to the label part of the construction,
-%% to find out which case should be applied:
-%\[
-%\textit{append}\ :=\ \lam{x}{\lam{y}{\wrec{\lam{l}{\lam{p}{\lam{r}{\{ \mathsf{@cons} \mapsto 
+\subsection{Factoring out nonrecursive data}
+
+It would be reasonable to change the format of W-types so that the construction explicitly has a place for nonrecursive data.  So we would have
+\[
+\ctora{l}{n}{f}
+\]
+\noindent where $n$ is just the nonrecursive data associated with the given label, and $f$ remains the function which returns subdata.  The syntax of the W-type recursor would remain the same, but its computation rule would change as follows:
+\[
+\wrec{R}{\ctora{l}{n}{f}} \ \ = \ \ R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\]
+\noindent So the function $R$ which is being folded over the constructor value would be given
+the nonrecursive subdata $n$ explicitly, as an extra argument.  Everything else is the same
+as before.  With this simple modification, lists could be written more naturally as
+follows:
+\[
+\begin{array}{lll}
+\textit{Cons} & := & \lam{h}{\lam{t}{\ctora{\mathsf{@cons}}{h}{\lam{x}{t}}}} \\
+\textit{Nil} & := & \ctora{\mathsf{@nil}}{\wunit}{\lam{x}{\wunit}} \\
+\textit{append} & := & \lam{x}{\lam{y}{\wrec{(\lam{l}{\lam{h}{\lam{p}{\lam{r}{\{ \mathsf{@cons}\mapsto \textit{Cons}\ d\ (r\ \wunit); \mathsf{@nil}\mapsto y\}\ l}}}})}{x}}}
+\end{array}
+\]
+\noindent Now \textit{append} is more natural, because the function we are folding over the first list $x$ takes in the label $l$ (which is either \textsf{@cons} or \textsf{@nil}), and then the nonrecursive data $h$.  If $l$ is \textsf{@cons}, then $h$ is the head of the list, which we
+use as before.  The code no longer needs to open the first component of the W-type construction to see what kind of list this is.
+
 
 \section{Adding types}
 
