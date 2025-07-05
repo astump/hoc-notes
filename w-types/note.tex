@@ -357,8 +357,107 @@ follows:
 \noindent Now \textit{append} is more natural, because the function we are folding over the first list $x$ takes in the label $l$ (which is either \textsf{@cons} or \textsf{@nil}), and then the nonrecursive data $h$.  If $l$ is \textsf{@cons}, then $h$ is the head of the list, which we
 use as before.  The code no longer needs to open the first component of the W-type construction to see what kind of list this is.
 
-
 \section{Adding types}
+
+Now that we have considered the type-free definitions of construction
+and recursion for W-types, let us consider how to type them.  We will
+use the version of W-types factoring out nonrecursive data, as
+described in the previous section.  We do not need to be too specific
+about the other typing features available, but they should include at
+least function types and a kind $\star$ to be the classifier for
+types (so $\textit{Bool} : \star$, for example).  Also, there should
+be enumeration types $\{\mathsf{l}_1 , \cdots , \mathsf{l}_k\}$ describing
+set of labels.  We should have a unit type $\wunit$ for the $\wunit$ value (so with typing
+$\wunit : \wunit$).  Finally, I write $\perp$ for an empty type (with no
+inhabitant $t : \perp$).
+
+First, we need to add a new primitive type form for W-types, to describe
+constructions $\ctora{l}{n}{r}$, where (to recall) $l$ is a label indicating
+which constructor is used, $n$ is the nonrecursive data, and
+$r$ is a function returning subdata.  To type such a construction, we
+clearly need:
+\begin{itemize}
+\item a type $L$ for the label $l$
+\item a type constructor $N$ where $N\ l$ is the type for the nonrecursive data
+\item a type constructor $R$ where $R\ l$ is the type for inputs to the function $r$
+\end{itemize}
+\noindent $N$ and $R$ are type constructors (that is, functions returning types), because
+we need to describe the types for each possible label $l$.  So given a label $l$, we need
+to know what the type will be for nonrecursive data of a construction labeled $l$, for example.
+In the case of the recursive subdata, only the input type of $r$ needs to be specified, because the output
+type is determined already: given an index (like the natural number $i$ selecting the $i$'th smaller
+ordinal for a \textit{Limit}), $r$ returns a piece of subdata, which recursively
+has the W-type again.  I propose this syntax:
+\[
+\w{L}{N}{R}
+\]
+\noindent Following the above discussion, this has kind $\star$ (so it is a type) assuming
+\begin{itemize}
+\item $L$ has kind $\star$
+\item $N$ and $R$ both have kind $L \to \star$
+\end{itemize}
+
+\noindent If one wanted to ensure that the top-level syntactic form of an expression
+determined whether that expression is a term, type, or kind, then it would be necessary
+to pick a slightly different syntax, maybe $\wb{L}{N}{R}$ or (if one avoids Unicode) $\wc{L}{N}{R}$.
+In my opinion, it is rather nicer just to reuse the term syntax, if possible, the way
+Haskell does for tuples as values and tuple types (for example, $(\textit{True},\textit{"hi"}) : (\textit{Bool},\textit{String})$).
+
+The typing rule for W-types as just described would then be:
+\[
+\infer{ \w{L}{N}{R} : \star}{L : \star & N : L \to \star  & R : L \to \star }
+\]
+\noindent This records exactly the same information as in the informal
+description: the three premises just say what we wrote above, that $L$
+has kind $\star$ ($L : \star$), and so forth.  Usually typing rules
+prove statements of the form $\Gamma \vdash t : T$, where $\Gamma$ is
+a set of assumptions about the types or kinds of free variables.  But
+for W-types we will not need to modify the typing context, so it can
+just be elided throughout the rules.  This will make them easier to
+read.
+
+
+\subsection{Example: the type for lists}
+
+\noindent The type of lists storing data of type $A$ would be defined as
+\[
+\w{\{\mathsf{@cons},\mathsf{@nil}\}}{\{\mathsf{@nil} \mapsto \wunit ; \mathsf{@cons} \mapsto A\}}{\{\mathsf{@nil} \mapsto \perp ; \mathsf{@cons} \mapsto \wunit\}}
+\]
+\noindent Here, the type $L$ of labels is $\{\mathsf{@cons},\mathsf{@nil}\}$.  The type constructor $N$ describing the
+nonrecursive data is
+\[
+\{\mathsf{@nil} \mapsto \wunit ; \mathsf{@cons} \mapsto A\}
+\]
+\noindent This is indeed a function from the type $L$ to $\star$.  $N$
+returns $\wunit$ for \textsf{@nil}, because \textsf{@nil} lists have
+no nonrecursive data; and $N$ returns $A$ for $\textsf{@cons}$, for the
+type of the head of the list.
+
+Finally, the type constructor $R$ is 
+\[
+\{\mathsf{@nil} \mapsto \perp ; \mathsf{@cons} \mapsto \wunit\}
+\]
+\noindent Recall that $R$ is supposed to tell you the type for indices
+to the function $r$ in a construction $\ctora{l}{n}{r}$.  Empty lists
+have no subdata, so one should not be able to call $r$ at all if $l$
+is \textsf{@nil}.  That is why the input type for $r$ is $\perp$.
+From a typing perspective, calling $r$ must return some subdata, of
+type $\textit{List}\ A$ (which is defined to be this W-type) again.
+Since a \textsf{@nil} list truly has no subdata, we must make sure it
+is impossible to call $r$, which we do by making $r$ require an input
+that cannot possibly exist (unless in code which is already itself
+taking in an input of type $\perp$, but then that code cannot be
+called either).  $R$ returns $\wunit$ if the label is \textsf{@cons},
+because there is just one piece of subdata for a non-empty list,
+namely the tail.  So given $\wunit$ as an input, $r$ will return
+the tail.  Notice that it would not be correct to use a type with
+more inhabitants than $\wunit$ as the value for $R\ \mathsf{@cons}$,
+because then the $\textit{List}\ A$ type would also abstract values that held multiple
+pieces of subdata for \textsf{@cons} lists.  But lists are supposed
+to be linear data structures, so there should just be one piece of
+subdata for \textsf{@cons} lists.
+
+
 
 \bibliographystyle{plain}
 \bibliography{main}
