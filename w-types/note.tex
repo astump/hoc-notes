@@ -372,21 +372,21 @@ $\wunit : \wunit$).  Finally, I write $\perp$ for an empty type (with no
 inhabitant $t : \perp$).
 
 First, we need to add a new primitive type form for W-types, to describe
-constructions $\ctora{l}{n}{r}$, where (to recall) $l$ is a label indicating
+constructions $\ctora{l}{n}{f}$, where (to recall) $l$ is a label indicating
 which constructor is used, $n$ is the nonrecursive data, and
-$r$ is a function returning subdata.  To type such a construction, we
+$f$ is a function returning subdata.  To type such a construction, we
 clearly need:
 \begin{itemize}
 \item a type $L$ for the label $l$
 \item a type constructor $N$ where $N\ l$ is the type for the nonrecursive data
-\item a type constructor $R$ where $R\ l$ is the type for inputs to the function $r$
+\item a type constructor $R$ where $R\ l$ is the type for inputs to the function $f$
 \end{itemize}
 \noindent $N$ and $R$ are type constructors (that is, functions returning types), because
 we need to describe the types for each possible label $l$.  So given a label $l$, we need
 to know what the type will be for nonrecursive data of a construction labeled $l$, for example.
-In the case of the recursive subdata, only the input type of $r$ needs to be specified, because the output
+In the case of the recursive subdata, only the input type of $f$ needs to be specified, because the output
 type is determined already: given an index (like the natural number $i$ selecting the $i$'th smaller
-ordinal for a \textit{Limit}), $r$ returns a piece of subdata, which recursively
+ordinal for a \textit{Limit}), $f$ returns a piece of subdata, which recursively
 has the W-type again.  I propose this syntax:
 \[
 \w{L}{N}{R}
@@ -437,27 +437,115 @@ Finally, the type constructor $R$ is
 \[
 \{\mathsf{@nil} \mapsto \perp ; \mathsf{@cons} \mapsto \wunit\}
 \]
-\noindent Recall that $R$ is supposed to tell you the type for indices
-to the function $r$ in a construction $\ctora{l}{n}{r}$.  Empty lists
-have no subdata, so one should not be able to call $r$ at all if $l$
-is \textsf{@nil}.  That is why the input type for $r$ is $\perp$.
-From a typing perspective, calling $r$ must return some subdata, of
-type $\textit{List}\ A$ (which is defined to be this W-type) again.
-Since a \textsf{@nil} list truly has no subdata, we must make sure it
-is impossible to call $r$, which we do by making $r$ require an input
+\noindent Recall that $R$ is supposed to tell you the type for inputs
+to the function $f$ in a construction $\ctora{l}{n}{f}$.  Those inputs
+are the indices into the collection of subdata, like the tail of a
+nonempty list or the subordinals of a Limit ordinal. Empty lists have
+no subdata, so one should not be able to call $f$ at all if $l$ is
+\textsf{@nil}.  That is why the input type for $f$ is $\perp$.  From a
+typing perspective, calling $f$ must return some subdata, of type
+$\textit{List}\ A$ (which is defined to be this W-type) again.  Since
+a \textsf{@nil} list truly has no subdata, we must make sure it is
+impossible to call $f$, which we do by making $f$ require an input
 that cannot possibly exist (unless in code which is already itself
 taking in an input of type $\perp$, but then that code cannot be
 called either).  $R$ returns $\wunit$ if the label is \textsf{@cons},
 because there is just one piece of subdata for a non-empty list,
-namely the tail.  So given $\wunit$ as an input, $r$ will return
-the tail.  Notice that it would not be correct to use a type with
-more inhabitants than $\wunit$ as the value for $R\ \mathsf{@cons}$,
-because then the $\textit{List}\ A$ type would also abstract values that held multiple
-pieces of subdata for \textsf{@cons} lists.  But lists are supposed
-to be linear data structures, so there should just be one piece of
-subdata for \textsf{@cons} lists.
+namely the tail.  So given $\wunit$ as an input, $f$ will return the
+tail.  Notice that it would not be correct to use a type with more
+inhabitants than $\wunit$ as the value for $R\ \mathsf{@cons}$,
+because then the $\textit{List}\ A$ type would also abstract values
+that held multiple pieces of subdata for \textsf{@cons} lists.  But
+lists are supposed to be linear data structures, so there should just
+be one piece of subdata for \textsf{@cons} lists.
 
+\subsection{The typing rule for constructions}
 
+Now let us see the typing rule for constructions $\ctora{l}{n}{f}$.  For this
+to have a W-type of the form $\w{L}{N}{R}$ we were just discussing, what has
+to be true?
+
+\begin{itemize}
+\item The label $l$ certainly has to have the type $L$ for labels.
+\item The nonrecursive data $n$ should have the type $N\ l$ that
+  the type constructor says should be there if the label is $l$.
+\item The function $f$ needs to take in a value of type $R\ l$,
+  because this is the type for indices into the collection of subdata,
+  and such an index is what $f$ expects as input. It should return a
+  result of the W-type, namely the subdata for the given index..
+\end{itemize}
+
+Formalizing these ideas, we get the following typing rule:
+\[
+\infer{\ctora{l}{n}{f} : \w{L}{N}{R}}
+      {l : L & n : N\ l & f : R\ l \to \w{L}{N}{R}}
+      \]
+      
+\subsection{The typing rule for recursion}
+
+A recursion $\wrec{R}{t}$ takes in a function $R$ and a value $t$ of the W-type.
+Recalling the computation rule will help us understand what the typing of a recursion
+should be:
+\[
+\wrec{R}{\ctora{l}{n}{f}} \ \ = \ \ R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\]
+\noindent We know from the typing rule for constructions that for some $L$, $N$, and $R$, we will have
+\[
+\begin{array}{lll}
+  l & : & L \\
+  n & : & N\ l \\
+  f & : & R\ l \to \w{L}{N}{R}
+\end{array}
+\]
+\noindent Since $R$ takes in those inputs on the right-hand side of the computation rule,
+we know that the type of $R$ must look like:
+\[
+\Pia{l}{L}{\Pia{n}{N\ l}{\Pia{r}{R\ l \to \w{L}{N}{R}}{\cdots}}}
+\]
+\noindent We just need to fill in the missing part of this type.  We expect that
+the recursion is going to compute a value of some type constructor $C$ which might
+be a function of the input value $\ctora{l}{n}{f}$.  So $C$ will have kind
+\[
+\w{L}{N}{R} \to \star
+\]
+\noindent This is similar to how a recursion on natural numbers $n$ can compute a value of type $P\ n$,
+which is used, for example, when reasoning by induction on $n$.  Now what type will the final (fourth)
+input of $R$ on the right-hand side of the computation rule have?  That input is
+\[
+\lam{x}{\wrec{R}{(f\ x)}}
+\]
+\noindent It is taking in a value of type $R\ l$, just as the subdata function $f$ does.  And it returns
+a value of type $C$ (since it is recursing).  $C$ depends on the input to the recursion, so in this case,
+since $f\ x$ is the input, the result of the recursion will have type $C\ (f\ x)$.  This means that the
+type for $\lam{x}{\wrec{R}{(f\ x)}}$ is
+\[
+\Pia{x}{R\ l}{C\ (f\ x)}
+\]
+\noindent Putting all this together, the type of $R$ should be:
+\[
+\begin{array}{l}
+  \Pia{l}{L}{\ }\\
+  \Pia{n}{N\ l}{\ }\\
+  \Pia{f}{R\ l \to \w{L}{N}{R}}{\ } \\
+  (\Pia{x}{R\ l}{C\ (f\ x)}) \to \\
+  C\ \ctora{l}{n}{f}
+  \end{array}
+\]
+\noindent Finally, the type of $\wrec{R}{d}$ is $C\ d$.  So if we think of $\wrec{R}{d}$
+as a proof by induction, it is saying that to prove a property $C$ of some value $d$ of
+type $\w{L}{N}{R}$, it is sufficent to assume
+
+\begin{itemize}
+\item $l : L$
+\item $n : N\ l$
+\item $f:R\ l \to \w{L}{N}{R}$
+\end{itemize}
+
+\noindent and show $C\ \ctora{l}{n}{f}$, assuming for induction hypothesis
+\[
+\Pia{x}{R\ l}{C\ (f\ x)}
+\]
+\noindent That type expresses that $C$ holds for all the subdata that $f$ can produce.
 
 \bibliographystyle{plain}
 \bibliography{main}
