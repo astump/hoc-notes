@@ -105,6 +105,12 @@ language should have the usual type-safety property that ones expects
 of any statically typed programming language. This is vastly easier to
 achieve than crafting a type system that enforces termination.
 
+As we begin our look at Bend, it is important to emphasize one further
+design goal for the language: minimality.  We aim to have a core
+language with a small number of primitive operations, and similarly
+for the type system.  This is both for ease of implementation, and
+reliability of the language design.
+
 \section{Bend's core language}
 
 The syntax of Bend's core programming language is shown in
@@ -118,15 +124,15 @@ restricted anonymous functions using types.  With Bend's approach to
 logical consistency, we need a type-free way to enforce termination of
 $\lambda$-terms.  One method is to restrict how often a variable may
 be used in an anonymous function.  Bend requires $\lambda$-bound
-variables to be used at most once.  It is well known that this
-restriction ensures termination.  It does impose serious limits on
-programs written with anonymous functions, but we will see that the
-way recursion works expands the possibilities greatly (while
-preserving termination).
+variables to be used at most once.  Such $\lambda$-abstractions are
+called affine.  It is well known that this restriction ensures
+termination.  It does impose serious limits on programs written with
+anonymous functions, but we will see that the way recursion works
+expands the possibilities greatly (while preserving termination).
 
 Returning to the syntax: we have applications $t\ t'$ of a term $t$
 being used as a function to term $t'$ given as the argument to that
-function.  We have a trivial piece of data $\wunit$, that is useful as
+function.  We have a trivial piece of data $\wunit$, which is useful as
 a placehold.  We could use a machine integer $i$ as a base case
 instead, but we will see that with typing, it is more convenient to
 have a separate trivial piece of data.  That is $\wunit$.  We have a
@@ -148,27 +154,32 @@ what is known as W-types, and they will be presented in detail below.
 \label{fig:pl}
 \end{figure}
 
-\section{Structured data}
+\subsection{Structured data}
 
 To implement data structures, every programming language needs some
 approach to creating and processing structured data.  In Bend, the
 main form of structured data is the construction $\ctor{l}{n}{r}$.
 Before we discuss this, though, it is very helpful to have a way of
-constructing pairs $(t,t')$.  There are several
-possibilities for how to do this, but here we propose to
-$\lambda$-encode them.  So we take this definition:
+constructing pairs $(t,t')$.
+
+\subsubsection{Pairs}
+
+There are several possibilities for how to include pairs in Bend.
+Here we propose to $\lambda$-encode them.  So we take this definition:
 \[
 (t,t') := \lam{c}{c\ t\ t'}
 \]
-\noindent There are two benefits to this choice.  First, we do not
-need to add another primitive construction to the language for pairs,
-as we are defining pairing.  Second, we gain affine access to the
-components of a pair.  That is, given a pair, we write a function
-which is given both components at once.  If instead we had primitive
-accessors like $p.1$ and $p.2$ for accessing the components of a pair
-$p$, we would not be able to write simple functions like the one
-that swaps the components of a pair, as an affine function.  For
-such a function would be written as
+\noindent Syntactically, we propose to add pairs as primitive syntax,
+but the implementation of Bend will just treat them as defined.  There
+are two benefits to defining pairs this way.  First, we do not need to
+add another primitive construction for pairs to the semantics of the
+language: they are just defined using a $\lambda$-term.  Second, we
+gain affine access to the components of a pair: we can make use of a
+pair just once and still obtain both its components.  If instead we
+had primitive accessors like $p.1$ and $p.2$ for accessing the
+components of a pair $p$, we would not be able to write simple
+functions like the one that swaps the components of a pair, as an
+affine function.  For such a function would be written as
 \[
 \lam{p}{(p.2,p.1)}
 \]
@@ -182,8 +193,132 @@ So if $p$ is $(1,2)$, for example, then we will have this computational behavior
 \[
 (1,2)\ \lam{x}{\lam{y}{(y,x)}} \ =\ (\lam{c}{c\ 1\ 2})\ \lam{x}{\lam{y}{(y,x)}}\ \leadsto\ (\lam{x}{\lam{y}{(y,x)}})\ 1\ 2 \leadsto^* (2,1)
 \]
-\noindent Note that the $\lambda$-abstractions shown are all linear: the input variables $c$, $x$, and $y$ are used exactly once in the terms
-where they are $\lambda$-bound.
+\noindent The input variable $c$ gets instantiated with
+$\lam{x}{\lam{y}{(y,x)}}$, giving that $\lambda$-term access to both
+components of the pair.  These $\lambda$-abstractions are all linear:
+the input variables $c$, $x$, and $y$ are used exactly once in the
+terms where they are $\lambda$-bound.
+
+\subsubsection{Structures}
+
+The construction $\ctor{l}{n}{f}$ will be called a W-structure (or just structure, for short).
+It is the basic form in Bend for recursively structured data.  The idea for structures
+comes from the type-theoretic construction known as W-types.  Indeed, Bend's structures
+are just a version of those for W-types.  Since Bend starts from a type-free programming
+language and then adds types, we start with W-structures, and define the W-types that
+describe them later.  We also have a primitive feature $\wrec{r}{t}$ of the language,
+for recursively processing a structure.
+
+A structure $\ctor{l}{n}{f}$ consists of three parts:
+\begin{itemize}
+\item a \emph{label} $l$, to describe what kind of structure this is
+\item nonrecursive subdata $n$, which will not be recursively processed
+  by recursions $\wrec{r}{t}$
+\item a recursive subdata function $f$, which takes in an index $x$
+  that specifies which piece of recursive subdata is desired, and
+  returns it.
+  \end{itemize}
+
+\noindent The index $x$ given to the subdata function $f$ is drawn
+from some finite set if the structure has only finitely many immediate
+subdata.  For example, a list node has one piece of subdata, namely
+the tail, while a node of a binary tree has two pieces of subdata.  So
+the indices would come from a one-element set and a two-element set,
+respectively.  But the power of W-structures comes from the fact that
+$i$ could also be from an infinite set, in which case the structure
+can have infinitely many immediate subdata.  There is still a
+restriction, though.  While there may be infinitely many paths through
+a structure, each path is finite.  This enables us to define
+$\wrec{r}{t}$ as a form of terminating recursion over structures,
+because we cannot recurse infinitely deeply into a structure.
+
+For recursions $\wrec{R}{d}$ over a structure $d$, we write a function
+$R$ which takes the structure's label, nonrecursive subdata, and
+subdata function.  $R$ also is provided a function $r$ that returns
+recursive results.  $R$ then returns a result, generally by calling
+$r$.  For each possible input to $f$, the function $r$ returns the
+result of recursing on the subdata $f\ i$; that is, the $i$'th piece
+of subdata.  The recursor $\wrec{R}{d}$ uses this function $R$ to
+recursively process a structure $d$. The reduction rule, which
+explains how recursions work computationally, is:
+
+\[
+\wrec{R}{\ctor{l}{n}{f}} \leadsto R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\]
+
+\noindent So someone using the recursor writes $R$, and then for each
+piece of data $\ctor{l}{n}{f}$, that function $R$ will be invoked with
+the label $l$, the nonrecursive subdata $n$, and the function $f$,
+which $R$ can then call as needed to obtain subdata.  The fourth
+argument to $R$ is the value that $R$ will use for $r$, namely
+$\lam{x}{\wrec{R}{(f\ x)}}$.  That function takes in an index $x$, and
+recursively invokes the recursor on the $x$'th piece of subdata, given
+by $f\ x$.  
+
+
+\subsection{Reduction semantics}
+
+Figure~\ref{fig:opsem} gives the complete reduction semantics for
+Bend.  This semantics specifies the meaning of programs by saying how
+they compute.  Calling it a ``reduction'' semantics indicates that we
+are not specifying a deterministic evaluation order for programs.
+There might be multiple choices of which part of a term to reduce
+next, and the rules does not specify which one should be chosen.  So
+the reduction relation is nondeterministic.  But we will show below
+(Section~\ref{sec:opmeta}) that all choices are guaranteed to lead to
+the same result.  It could happen that some choices lead to that
+result more efficiently.  But they all will, in principle, succeed.
+
+Returning to Figure~\ref{fig:opsem}: there are reduction rules for
+reducing terms where an anonymous function $\lam{x}{s}$ is applied to
+an argument $t$.  This is the well-known $\beta$-rule from lambda
+calculus.  It uses the notation $[t/x]s$ to denote the result of
+substituting $t$ for $x$ in $s$.  This should be done in a standard
+way to avoid capturing free variables of $t$ as one passes under
+$\lambda$-abstractions in $s$.  There is also the reduction rule for
+W-structures, mentioned above.  The two rule inference rules
+at the bottom of the figure then define multi-step reduction $\leadsto^*$
+in terms of single-step reduction $\leadsto$.  The first rule says
+that if you can single-step reduce $s$ to $t$, then you can do a multi-step
+reduction of a term containing $s$ some finite number of times to one
+containing instead $t$.  The term $r$ mentioned in the rule might
+not contain $x$ at all, in which case we get reflexivity of $\leadsto^*$,
+as the rule will say that $r \leadsto^* r$ in that situation.
+
+The semantics as presented here does not specify the exact behavior of the machine operations
+on integers.  Those can be specified in detail later as needed.  It is noteworthy that the
+semantics is quite compact, in terms of numbers of rules needed to define it.  This is
+in keeping with Bend's goal of minimality.
+
+\begin{figure}
+  \[
+\begin{array}{l}
+  \begin{array}{lll}
+    (\lam{x}{s})\ t & \leadsto & [t/x]s \\
+    \wrec{R}{\ctor{l}{n}{f}} & \leadsto & R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}}) \\
+    i\ o\ i' & \leadsto & j\ \ \textnormal{according to machine semantics for }o
+  \end{array}
+  \\ \\
+  \begin{array}{lll}
+  \infer{[s/x]r \leadsto^* [t/x]r}{s \leadsto t} &\ \ &
+  \infer{r \leadsto^* t}{r \leadsto^* s & s \leadsto^* t}
+  \end{array}
+\end{array}  
+\]
+  \caption{Reduction semantics for Bend}
+  \label{fig:opsem}
+  \end{figure}
+
+\section{Examples}
+
+%% for the example above of \verb|Lim| for ordinals, the
+%% name would be a natural number $i$, and the subdata would be the
+%% $i$'th ordinal contained in that limit ordinal.  Let us write
+%% $\ctor{l}{f}$ for this construction with label $l$ and function $f$.
+%% So it is effectively a pair, but the second argument is always a
+%% function.
+
+\section{Metatheory of Bend's programming language}
 
 \bibliographystyle{plain}
 \bibliography{main}
