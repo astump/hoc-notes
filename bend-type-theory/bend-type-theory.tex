@@ -232,25 +232,25 @@ a structure, each path is finite.  This enables us to define
 $\wrec{r}{t}$ as a form of terminating recursion over structures,
 because we cannot recurse infinitely deeply into a structure.
 
-For recursions $\wrec{R}{d}$ over a structure $d$, we write a function
-$R$ which takes the structure's label, nonrecursive subdata, and
-subdata function.  $R$ also is provided a function $r$ that returns
-recursive results.  $R$ then returns a result, generally by calling
-$r$.  For each possible input to $f$, the function $r$ returns the
+For recursions $\wrec{r}{t}$ over a structure $t$, we write a function
+$r$ which takes the structure's label, nonrecursive subdata, and
+subdata function.  $r$ also is provided a function $q$ that returns
+recursive results.  Then $r$  returns a result, generally by calling
+$q$.  For each possible input to $f$, the function $q$ returns the
 result of recursing on the subdata $f\ i$; that is, the $i$'th piece
-of subdata.  The recursor $\wrec{R}{d}$ uses this function $R$ to
-recursively process a structure $d$. The reduction rule, which
+of subdata.  The recursor $\wrec{r}{t}$ uses this function $r$ to
+recursively process a structure $t$. The reduction rule, which
 explains how recursions work computationally, is:
 
 \[
-\wrec{R}{\ctor{l}{n}{f}} \leadsto R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\wrec{r}{\ctor{l}{n}{f}} \leadsto r\ l\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}})
 \]
 
-\noindent So someone using the recursor writes $R$, and then for each
-piece of data $\ctor{l}{n}{f}$, that function $R$ will be invoked with
+\noindent So someone using the recursor writes $r$, and then for each
+piece of data $\ctor{l}{n}{f}$, that function $r$ will be invoked with
 the label $l$, the nonrecursive subdata $n$, and the function $f$,
-which $R$ can then call as needed to obtain subdata.  The fourth
-argument to $R$ is the value that $R$ will use for $r$, namely
+which $r$ can then call as needed to obtain subdata.  The fourth
+argument to $r$ is the value that $r$ will use for $q$, namely
 $\lam{x}{\wrec{R}{(f\ x)}}$.  That function takes in an index $x$, and
 recursively invokes the recursor on the $x$'th piece of subdata, given
 by $f\ x$.  
@@ -319,6 +319,7 @@ in keeping with Bend's goal of minimality.
 %% function.
 
 \section{Metatheory of Bend's programming language}
+\label{sec:opmeta}
 
 \bibliographystyle{plain}
 \bibliography{main}
