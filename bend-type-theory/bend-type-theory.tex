@@ -309,6 +309,169 @@ in keeping with Bend's goal of minimality.
   \label{fig:opsem}
   \end{figure}
 
+\section{Typing}
+
+Having proposed a syntax and reduction semantics for Bend, let us now
+consider typing.  We can describe Bend's proposed type system very
+succinctly: it is the (Curry-style) Calculus of Constructions plus a
+simple variant of W-types, and including also a primitive typed
+extensional equality type.  In this section, we will elaborate on
+this short description, one ingredient at a time.
+
+One overarching point: the type system is Curry-style, meaning that
+typing rules should be viewed as defining a typing relation on the
+untyped terms whose syntax is given above in Figure~\ref{fig:pl}.  But
+in this section, we will present the rules using annotated terms,
+which contain enough information to confirm a typing for a term.  An
+example is the annotated term $\tlam{x}{A}{t}$, with a type for the
+bound variable.  So the typing rules look like Church-style rules,
+computing types for terms that have various type annotations in them.
+But there is a critical difference.  With Curry-style typing, we are
+entitled to make use of an erasure function $|e|$ to drop all
+annotations from the term parts of expressions $e$.  This function is
+used in the conversion rule, allowing us to change the type $A$ of a
+term to a type $B$, if $|A|$ and $|B|$ are convertible.  Using erasure
+at conversion allows us to equate many more terms than with
+Church-style typing, and eliminates many difficult technical problems
+reasoning about annotated terms, which are encountered in Church-style
+type theory.
+
+
+\subsection{The Calculus of Constructions}
+
+\begin{figure}
+\[
+\begin{array}{lllll}
+  \textit{TyVar} & \ni & X,Y,Z & \ &\ \\
+  \textit{TmVar} & \ni & x,y,z & \ &\ \\\\
+  \textit{Knd} & \ni & \kappa & ::= & \star\ |\ \Pia{x}{T}{\kappa}\ |\ \Pia{x}{\kappa}{\kappa'} \\
+  \textit{Ty} & \ni & R,S,T & ::= &
+     X \ | \ \Pia{x}{T}{T'}\ |\ \Pia{X}{\kappa}{T}\ |\ \tlam{x}{T}{T'} \ |\ \tlam{X}{\kappa}{T}\ |\ T\ t\ |\ T\ T' \ |\ t \simeq t' \\\\
+  \textit{AnnoTm} & \ni & r,s,t & ::= & x \ |\ \tlam{x}{T}{t}\ | \ \tlam{X}{\kappa}{t}\ |\ t\ t'\ |\ t\ T \ |\ \rho\ t - t'
+\end{array}
+\]
+\caption{Syntax of CC}
+\label{fig:ccsyn}
+\end{figure}
+
+The syntax for the Curry-style Calculus of Constructions (CC) is
+listed in Figure~\ref{fig:ccsyn}.  Types abstract terms, and kinds
+abstract types.  For example, every type is abstracted by kind
+$\star$.  We separate kinds, types, and terms syntactically.  In the
+literature, one finds more compact presentations of CC, where the
+syntactic category of terms includes the types and kinds, which must
+then be distinguished more semantically, by recursively computing the
+level of an expression~\cite{B92}.  We  find the present
+approach more straightforward, if a little more verbose.
+The typing rules are given in Figure~\ref{fig:tc}.  Erasure (used in
+the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.
+
+
+\begin{figure}
+  \begin{subfigure}[c]{1.0\textwidth}
+    \begin{mathpar}
+      \inferrule[type]{ }
+                      {\Gamma \vdash \star}
+
+      \inferrule[tk-pi]{\Gamma \vdash T : \star \\ \Gamma, x : T \vdash \kappa}
+                       {\Gamma \vdash \Pia{x}{T}{\kappa}}
+
+      \inferrule[kk-pi]{\Gamma \vdash \kappa \\ \Gamma, X : \kappa \vdash \kappa'}
+                       {\Gamma \vdash \Pia{X}{\kappa}{\kappa'}}
+    \end{mathpar}
+    \caption{Classifiable kinds}
+  \end{subfigure}
+  %%%%%%%%%%%%%%%%%%%%
+  \begin{subfigure}[c]{1.0\textwidth}
+    \begin{mathpar}
+      \inferrule[t-var]{X : \kappa \in \Gamma}
+                       {\Gamma \vdash X : \kappa}
+
+      \inferrule[t-conv]{\Gamma \vdash T : \kappa \\ \betaeq{|\kappa|}{|\kappa'|}}
+                        {\Gamma \vdash T : \kappa'}
+      \\
+      \inferrule[tt-pi]{\Gamma \vdash T : \star \\ \Gamma, x : T \vdash T' : \star}
+                       {\Gamma \vdash \Pia{x}{T}{T'} : \star}
+
+      \inferrule[kt-pi]{\Gamma \vdash \kappa \\ \Gamma, X : \kappa \vdash T : \star}
+                       {\Gamma \vdash \Pia{X}{\kappa}{T} : \star}
+      \\
+      \inferrule[tk-abs]{\Gamma \vdash \Pia{x}{T}{\kappa} \\ \Gamma, x : T \vdash T' : \kappa}
+                        {\Gamma \vdash \tlam{x}{T}{T'} : \Pia{x}{T}{\kappa}}
+
+      \inferrule[kk-abs]{\Gamma \vdash \Pia{X}{\kappa}{\kappa'} \\ \Gamma, X : \kappa \vdash T : \kappa'}
+                        {\Gamma \vdash \tlam{X}{\kappa}{T} : \Pia{X}{\kappa}{\kappa'}}
+      \\
+      \inferrule[tk-app]{\Gamma \vdash T : \Pia{x}{R}{\kappa} \\ \Gamma \vdash t : R}
+                        {\Gamma \vdash T\ t : \subst{t}{x}{\kappa}}
+
+      \inferrule[kk-app]{\Gamma \vdash T : \Pia{X}{\kappa}{\kappa'} \\ \Gamma \vdash T' : \kappa}
+                        {\Gamma \vdash T\ T' : \subst{T'}{X}{\kappa'}}
+    \end{mathpar}
+    \caption{Kinding}
+  \end{subfigure}
+  %%%%%%%%%%%%%%%%%%%%
+  \begin{subfigure}[c]{1.0\textwidth}
+    \begin{mathpar}
+      \inferrule[a-var]{x : T \in \Gamma}
+                     {\Gamma \vdash x : T}
+
+      \inferrule[a-conv]{\Gamma \vdash t : T \\ \betaeq{|T|}{|T'|}}
+                      {\Gamma \vdash t : T'}
+      \\
+      \inferrule[a-tt-abs]{\Gamma \vdash \Pia{x}{T}{T'} : \star \\ \Gamma, x : T \vdash t : T'}
+                        {\Gamma \vdash \tlam{x}{T}{t} : \Pia{x}{T}{T'}}
+
+      \inferrule[a-kt-abs]{\Gamma \vdash \Pia{X}{\kappa}{T} : \star \\ \Gamma, X : \kappa \vdash t : T}
+                       {\Gamma \vdash \tlam{X}{\kappa}{t} : \Pia{X}{\kappa}{T}}
+      \\
+      \inferrule[a-tt-app]{\Gamma \vdash t : \Pia{x}{T}{T'} \\ \Gamma \vdash t' : T}
+                        {\Gamma \vdash t\ t' : \subst{t'}{x}{T'}}
+
+      \inferrule[a-tt-app]{\Gamma \vdash t : \Pia{x}{\kappa}{T'} \\ \Gamma \vdash T : \kappa}
+                        {\Gamma \vdash t\ T : \subst{T}{x}{T'}}
+    \end{mathpar}
+    \caption{Typing}
+    \label{fig:tc-atm}
+  \end{subfigure}
+  %%%%%%%%%%%%%%%%%%%%
+  \caption{Typing Derivations}
+  \label{fig:tc}
+\end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lll}
+    |\star| & = & \star \\
+    |\Pia{x}{T}{\kappa}| & = & \Pia{x}{|T|}{|\kappa|} \\
+    |\Pia{x}{\kappa}{\kappa'}| & = & \Pia{x}{|\kappa|}{|\kappa'|} \\
+    |X| & = & X \\
+    |\Pia{x}{T}{T'}| & = & \Pia{x}{|T|}{|T'} \\
+    |\tlam{x}{T}{T'}| & = & \tlam{x}{|T|}{|T'|} \\
+    |T\ t| & = & |T|\ |t| \\
+    |T\ T'| & = & |T|\ |T'| \\
+    |t \simeq t'| & = & |t| \simeq |t'| \\
+    |x| & = & x \\
+    |\tlam{x}{T}{t}| & = & \lam{x}{|t|} \\
+    |\tlam{X}{\kappa}{t}| & = & |t| \\
+    |t\ t'| & = & |t|\ |t'| \\
+    |t\ T| & = & |t| \\
+    |\rho\ t - t'| & = & |t'|
+  \end{array}
+  \]
+  \caption{Erasing annotations from terms, types, and kinds}
+  \label{fig:erase}
+\end{figure}
+
+
+\subsection{W-types}
+
+
+\subsection{An extensional equality type}
+
+
+
+
 \section{Examples}
 
 %% for the example above of \verb|Lim| for ordinals, the
@@ -317,6 +480,7 @@ in keeping with Bend's goal of minimality.
 %% $\ctor{l}{f}$ for this construction with label $l$ and function $f$.
 %% So it is effectively a pair, but the second argument is always a
 %% function.
+
 
 \section{Metatheory of Bend's programming language}
 \label{sec:opmeta}
