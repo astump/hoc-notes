@@ -346,8 +346,8 @@ type theory.
   \textit{TmVar} & \ni & x,y,z & \ &\ \\\\
   \textit{Knd} & \ni & \kappa & ::= & \star\ |\ \Pia{x}{T}{\kappa}\ |\ \Pia{x}{\kappa}{\kappa'} \\
   \textit{Ty} & \ni & R,S,T & ::= &
-     X \ | \ \Pia{x}{T}{T'}\ |\ \Pia{X}{\kappa}{T}\ |\ \tlam{x}{T}{T'} \ |\ \tlam{X}{\kappa}{T}\ |\ T\ t\ |\ T\ T' \ |\ t \simeq t' \\\\
-  \textit{AnnoTm} & \ni & r,s,t & ::= & x \ |\ \tlam{x}{T}{t}\ | \ \tlam{X}{\kappa}{t}\ |\ t\ t'\ |\ t\ T \ |\ \rho\ t - t'
+     X \ | \ \Pia{x}{T}{T'}\ |\ \Pia{X}{\kappa}{T}\ |\ \tlam{x}{T}{T'} \ |\ \tlam{X}{\kappa}{T}\ |\ T\ t\ |\ T\ T' \\\\
+  \textit{Tm} & \ni & r,s,t & ::= & x \ |\ \tlam{x}{T}{t}\ | \ \tlam{X}{\kappa}{t}\ |\ t\ t'\ |\ t\ T \ 
 \end{array}
 \]
 \caption{Syntax of CC}
@@ -355,16 +355,15 @@ type theory.
 \end{figure}
 
 The syntax for the Curry-style Calculus of Constructions (CC) is
-listed in Figure~\ref{fig:ccsyn}.  Types abstract terms, and kinds
-abstract types.  For example, every type is abstracted by kind
-$\star$.  We separate kinds, types, and terms syntactically.  In the
-literature, one finds more compact presentations of CC, where the
-syntactic category of terms includes the types and kinds, which must
-then be distinguished more semantically, by recursively computing the
-level of an expression~\cite{B92}.  We  find the present
-approach more straightforward, if a little more verbose.
-The typing rules are given in Figure~\ref{fig:tc}.  Erasure (used in
-the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.
+listed in Figure~\ref{fig:ccsyn}.  The three main syntactic categories
+defined there are annotated terms (\textit{Tm}), types (\textit{Ty},
+and kinds (\textit{Knd}).  Types abstract terms, and kinds abstract
+types.  For example, every natural number is a term, abstracted by the
+type \textit{Nat}.  And every type (like \textit{Nat}) is abstracted
+by kind $\star$.  The typing rules are given in Figure~\ref{fig:tc}.  Erasure (used in
+the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.  Erasure
+leaves the structure of types and kinds unchanged, but drops typing
+annotations from terms.
 
 
 \begin{figure}
@@ -413,22 +412,22 @@ the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.
   %%%%%%%%%%%%%%%%%%%%
   \begin{subfigure}[c]{1.0\textwidth}
     \begin{mathpar}
-      \inferrule[a-var]{x : T \in \Gamma}
+      \inferrule[var]{x : T \in \Gamma}
                      {\Gamma \vdash x : T}
 
-      \inferrule[a-conv]{\Gamma \vdash t : T \\ \betaeq{|T|}{|T'|}}
+      \inferrule[conv]{\Gamma \vdash t : T \\ \betaeq{|T|}{|T'|}}
                       {\Gamma \vdash t : T'}
       \\
-      \inferrule[a-tt-abs]{\Gamma \vdash \Pia{x}{T}{T'} : \star \\ \Gamma, x : T \vdash t : T'}
+      \inferrule[tt-abs]{\Gamma \vdash \Pia{x}{T}{T'} : \star \\ \Gamma, x : T \vdash t : T'}
                         {\Gamma \vdash \tlam{x}{T}{t} : \Pia{x}{T}{T'}}
 
-      \inferrule[a-kt-abs]{\Gamma \vdash \Pia{X}{\kappa}{T} : \star \\ \Gamma, X : \kappa \vdash t : T}
+      \inferrule[kt-abs]{\Gamma \vdash \Pia{X}{\kappa}{T} : \star \\ \Gamma, X : \kappa \vdash t : T}
                        {\Gamma \vdash \tlam{X}{\kappa}{t} : \Pia{X}{\kappa}{T}}
       \\
-      \inferrule[a-tt-app]{\Gamma \vdash t : \Pia{x}{T}{T'} \\ \Gamma \vdash t' : T}
+      \inferrule[app]{\Gamma \vdash t : \Pia{x}{T}{T'} \\ \Gamma \vdash t' : T}
                         {\Gamma \vdash t\ t' : \subst{t'}{x}{T'}}
 
-      \inferrule[a-tt-app]{\Gamma \vdash t : \Pia{x}{\kappa}{T'} \\ \Gamma \vdash T : \kappa}
+      \inferrule[t-app]{\Gamma \vdash t : \Pia{x}{\kappa}{T'} \\ \Gamma \vdash T : \kappa}
                         {\Gamma \vdash t\ T : \subst{T}{x}{T'}}
     \end{mathpar}
     \caption{Typing}
@@ -455,8 +454,7 @@ the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.
     |\tlam{x}{T}{t}| & = & \lam{x}{|t|} \\
     |\tlam{X}{\kappa}{t}| & = & |t| \\
     |t\ t'| & = & |t|\ |t'| \\
-    |t\ T| & = & |t| \\
-    |\rho\ t - t'| & = & |t'|
+    |t\ T| & = & |t| 
   \end{array}
   \]
   \caption{Erasing annotations from terms, types, and kinds}
@@ -469,6 +467,32 @@ the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.
 
 \subsection{An extensional equality type}
 
+We extend the syntax defined in Figure~\ref{fig:ccsyn} with the following additions:
+\[
+\begin{array}{lllll}
+  \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \eqtm{t}{T}{t'} \\
+  \textit{Tm} & \ni & r,s,t & ::= & \cdots\ |\ \rewrt{s}{t}\ |\ \cng{x}{T}{t}\ |\ \ext{t}
+\end{array}
+\]
+\noindent The erasure function is extended to the new forms of term as follows:
+\[
+\begin{array}{lll}
+  |\rewrt{s}{t}| & = & |t| \\
+  |\cng{x}{T}{t}| & = & |t| \\
+  |\ext{t}| & = & |t| 
+\end{array}
+\]
+\noindent The typing and kinding rules for these new constructs are shown in
+Figure~\ref{fig:eqtp}.
+
+\begin{figure}
+  \[
+\ 
+  \]
+\caption{Typing and kinding rules for equality}
+\label{fig:eqtp}
+  \end{figure}
+  
 
 
 
