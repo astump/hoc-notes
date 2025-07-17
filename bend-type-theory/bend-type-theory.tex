@@ -471,23 +471,31 @@ We extend the syntax defined in Figure~\ref{fig:ccsyn} with the following additi
 \[
 \begin{array}{lllll}
   \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \eqtm{t}{T}{t'} \\
-  \textit{Tm} & \ni & r,s,t & ::= & \cdots\ |\ \rewrt{s}{t}\ |\ \cng{x}{T}{t}\ |\ \ext{t}
+  \textit{Tm} & \ni & r,s,t & ::= & \cdots\ |\ \rfl{t}\ |\ \cng{x}{T}{t}{t'}\ |\ \ext{t}
 \end{array}
 \]
-\noindent The erasure function is extended to the new forms of term as follows:
+\noindent The type $\eqtm{t}{T}{t'}$ expresses extensional equality of terms $t$ and $t'$ at type $T$.  The new term constructs are for inference
+rules about this equality: reflexivity ($\rfl{t}$), congruence ($\cng{x}{T}{t}{t'}$), and extensionality ($\ext{t}$).
+We extend the erasure function to those new term constructs as follows:
 \[
 \begin{array}{lll}
-  |\rewrt{s}{t}| & = & |t| \\
-  |\cng{x}{T}{t}| & = & |t| \\
-  |\ext{t}| & = & |t| 
+  |\rfl{t}| & = & \lam{x}{x} \\
+  |\cng{x}{T}{s}{t}| & = & |t| \\
+  |\ext{t}| & = & \lam{x}{x}
 \end{array}
 \]
-\noindent The typing and kinding rules for these new constructs are shown in
+\noindent The typing and kinding rules are shown in
 Figure~\ref{fig:eqtp}.
 
 \begin{figure}
   \[
-\ 
+  \begin{array}{lllll}
+    \infer{\Gamma\vdash\rfl{t} : \eqtm{t}{T}{t}}{\Gamma\vdash t : T}
+    &\ &
+    \infer{\Gamma\vdash\cng{x}{T}{s}{t} : [t_2/x]T}{\Gamma\vdash s : \eqtm{t_1}{T'}{t_2} & \Gamma \vdash t : [t_1/x]T}
+    &\ &
+\ %    \infer{\Gamma\vdash\ext{t}
+    \end{array}
   \]
 \caption{Typing and kinding rules for equality}
 \label{fig:eqtp}
