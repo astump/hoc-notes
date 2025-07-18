@@ -434,7 +434,7 @@ annotations from terms.
     \label{fig:tc-atm}
   \end{subfigure}
   %%%%%%%%%%%%%%%%%%%%
-  \caption{Typing Derivations}
+  \caption{Typing Derivations for CC}
   \label{fig:tc}
 \end{figure}
 
@@ -457,7 +457,7 @@ annotations from terms.
     |t\ T| & = & |t| 
   \end{array}
   \]
-  \caption{Erasing annotations from terms, types, and kinds}
+  \caption{Erasing annotations from terms, types, and kinds of CC}
   \label{fig:erase}
 \end{figure}
 
@@ -474,9 +474,13 @@ We extend the syntax defined in Figure~\ref{fig:ccsyn} with the following additi
   \textit{Tm} & \ni & r,s,t & ::= & \cdots\ |\ \rfl{t}\ |\ \cng{x}{T}{t}{t'}\ |\ \ext{t}
 \end{array}
 \]
-\noindent The type $\eqtm{t}{T}{t'}$ expresses extensional equality of terms $t$ and $t'$ at type $T$.  The new term constructs are for inference
-rules about this equality: reflexivity ($\rfl{t}$), congruence ($\cng{x}{T}{t}{t'}$), and extensionality ($\ext{t}$).
-We extend the erasure function to those new term constructs as follows:
+\noindent The type $\eqtm{t}{T}{t'}$ expresses extensional equality of
+terms $t$ and $t'$ at type $T$.  Syntactically, it binds more tightly
+than $\Pi$, so an expression like $\Pia{x}{T}{\eqtm{s}{T'}{t}}$ should
+be parsed as $\Pia{x}{T}{(\eqtm{s}{T'}{t})}$.  The new term constructs
+are for inference rules about this equality: reflexivity ($\rfl{t}$),
+congruence ($\cng{x}{T}{t}{t'}$), and extensionality ($\ext{t}$).  We
+extend the erasure function to those new term constructs as follows:
 \[
 \begin{array}{lll}
   |\rfl{t}| & = & \lam{x}{x} \\
@@ -485,25 +489,61 @@ We extend the erasure function to those new term constructs as follows:
 \end{array}
 \]
 \noindent The typing and kinding rules are shown in
-Figure~\ref{fig:eqtp}.
+Figure~\ref{fig:eqtp}.  The first rule states that $\rfl{t}$ proves
+that $t$ equals itself at its type.  The second rule, for typing
+terms of the form $\cng{x}{T}{s}{t}$, allows us
+to change the type of some term $t$ by replacing chosen occurrences
+of $t_1$ with $t_2$, when we have a proof $s$ that $t_1$ and $t_2$
+are equal at type $T'$.  The occurrences to be replaced are indicated
+using a variable $x$ to show where in some type $T$ the occurrences
+of $t_1$ are to be exchanged for $t_2$.  That variable $x$ has to
+have the same type $T'$ for typing $T$, otherwise $T$ might be using
+$t_1$ and $t_2$ at different types than the ones for which they are
+proved equal.  For example, if we prove that $t_1$ equals $t_2$ at type
+$\textit{False} \to T$, where $\textit{False}$ is uninhabited, then
+we are not allowed to replace $t_1$ except at that same type.  Otherwise
+we could unsoundly change $t_1$ to $t_2$ that is not equivalent at the
+type where it is used.
+
+The last three rules are for typing uses $\ext{t}$ of extensionality.
+Two of them express the idea that if functions are equal for all
+inputs, then they are equal at function type.  There is one rule for
+equality of term inputs, and another for equality of type inputs.
+Since we work in a Curry-style theory, the premise of the rule for
+equality of type inputs just requires that $t_1$ equals $t_2$, because
+in Curry-style type theory, we do not apply terms to type arguments.
+Church-style type theory would have had $\Gamma \vdash t :
+\Pia{X}{\kappa}{\eqtm{t_1\ X}{T}{t_2\ X}}$ instead.  The very last
+rule of the figure expresses extensionality for equality types
+themselves, by stating that all proofs of equality are themselves
+equal: $t_1$ and $t_2$ are both proofs of some equation
+$\eqtm{r}{T}{s}$, then they are equal at that type.  It should be
+noted that this principle is incompatible with Homotopy Type Theory,
+which leaves open the possibility of other proofs of equalities
+besides just reflexivity~\cite{hottbook}.  If desired, the axiom could
+be omitted.
 
 \begin{figure}
   \[
-  \begin{array}{lllll}
-    \infer{\Gamma\vdash\rfl{t} : \eqtm{t}{T}{t}}{\Gamma\vdash t : T}
+  \begin{array}{lll}
+    \infer{\Gamma\vdash\eqtm{s}{T}{t} : \star}{\Gamma\vdash s : T & \Gamma\vdash t : T}
     &\ &
-    \infer{\Gamma\vdash\cng{x}{T}{s}{t} : [t_2/x]T}{\Gamma\vdash s : \eqtm{t_1}{T'}{t_2} & \Gamma \vdash t : [t_1/x]T}
+\infer{\Gamma\vdash\rfl{t} : \eqtm{t}{T}{t}}{\Gamma\vdash t : T}
+\\\\    
+\infer{\Gamma\vdash\cng{x}{T}{s}{t} : [t_2/x]T}
+          {\Gamma\vdash s : \eqtm{t_1}{T'}{t_2} & \Gamma \vdash t : [t_1/x]T & \Gamma,x:T'\vdash T : \star}
     &\ &
-\ %    \infer{\Gamma\vdash\ext{t}
+    \infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\Pia{x}{T'}{T})}{t_2}}{\Gamma \vdash t : \Pia{x}{T'}{\eqtm{t_1\ x}{T}{t_2\ x}}}
+\\ \\
+\infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\Pia{X}{\kappa}{T})}{t_2}}{\Gamma \vdash t : \Pia{X}{\kappa}{\eqtm{t_1}{T}{t_2}}}
+&\ &
+\infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\eqtm{r}{T}{s})}{t_2}}{\Gamma\vdash t_1 : \eqtm{r}{T}{s} & \Gamma\vdash t_2 : \eqtm{r}{T}{s}}
     \end{array}
   \]
 \caption{Typing and kinding rules for equality}
 \label{fig:eqtp}
   \end{figure}
   
-
-
-
 \section{Examples}
 
 %% for the example above of \verb|Lim| for ordinals, the
@@ -512,6 +552,10 @@ Figure~\ref{fig:eqtp}.
 %% $\ctor{l}{f}$ for this construction with label $l$ and function $f$.
 %% So it is effectively a pair, but the second argument is always a
 %% function.
+
+
+\subsection{Symmetry and transitivity of equality}
+
 
 
 \section{Metatheory of Bend's programming language}
