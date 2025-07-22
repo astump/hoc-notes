@@ -199,7 +199,8 @@ components of the pair.  These $\lambda$-abstractions are all linear:
 the input variables $c$, $x$, and $y$ are used exactly once in the
 terms where they are $\lambda$-bound.
 
-\subsubsection{Structures}
+\subsubsection{W-structures}
+\label{sec:wstruct}
 
 The construction $\ctor{l}{n}{f}$ will be called a W-structure (or just structure, for short).
 It is the basic form in Bend for recursively structured data.  The idea for structures
@@ -360,11 +361,24 @@ defined there are annotated terms (\textit{Tm}), types (\textit{Ty},
 and kinds (\textit{Knd}).  Types abstract terms, and kinds abstract
 types.  For example, every natural number is a term, abstracted by the
 type \textit{Nat}.  And every type (like \textit{Nat}) is abstracted
-by kind $\star$.  The typing rules are given in Figure~\ref{fig:tc}.  Erasure (used in
-the \textsc{conv} rules) is defined in Figure~\ref{fig:erase}.  Erasure
-leaves the structure of types and kinds unchanged, but drops typing
-annotations from terms.
+by kind $\star$.  We also use meta-variable $e$ for any form of expression,
+whether term, type, or kind.  The typing rules are given in Figure~\ref{fig:tc}.
 
+Erasure, used in the conversion rules \textsc{conv} and
+\textsc{t-conv}, is defined in Figure~\ref{fig:erase}.  Erasure leaves
+the structure of types and kinds unchanged, but drops typing
+annotations from terms.  The conversion rules also reference a
+$\beta$-equality relation on kinds and types, respectively.  This
+relation is defined in Figure~\ref{fig:convcc}, which also defines
+$\beta$-reduction for the two possible kinds of type-level
+$\beta$-redexes of CC (one where the argument is a term, the other
+where it is a type).
+
+These typing rules for CC do not enforce that $\lambda$-abstractions
+are affine.  This requirement is to be imposed on the erasures on
+terms, and it is checked syntactically, without reference to typing.
+This is so that the termination of the system does not depend on
+typing.
 
 \begin{figure}
   \begin{subfigure}[c]{1.0\textwidth}
@@ -461,13 +475,203 @@ annotations from terms.
   \label{fig:erase}
 \end{figure}
 
+\begin{figure}
+\begin{mathpar}
+    \inferrule[conv-ttbeta]{\ }{(\tlam{x}{T}{T'})\ t \leadsto^* [t/x]T'}
+    
+    \inferrule[conv-ktbeta]{\ }{(\tlam{X}{\kappa}{T'})\ T \leadsto^* [T/X]T'}
+
+\\ \\
+
+    \inferrule[conv-red]{e \leadsto^* e'}{e =_\beta e'}
+
+    \inferrule[conv-sym]{e =_\beta e'}{e' =_\beta e}
+
+    \inferrule[conv-subst]{e_1 =_\beta e_2}{[e_1/x]e =_\beta [e_2/x]e}
+
+\end{mathpar}
+  \caption{Reduction for type-level $\beta$-redexes, and conversion}
+  \label{fig:convcc}
+\end{figure}
+
+\subsection{Enumerated types}
+
+We extend the syntax of CC defined in Figure~\ref{fig:ccsyn} above, with the following additions:
+\[
+\begin{array}{lllll}
+  \textit{Labels} & \ni & l &\ &\ \\
+  \textit{Ty} & \ni & R,S,T & ::= & \ldots\ |\ \{ l_1, \ldots, l_k \}\ |\ \{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} \\
+  \textit{Tm} & \ni & r,s,t & ::= & \ldots\ |\ l\ |\ \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k \mapsto t_k \}
+\end{array}
+\]
+\noindent
+
+\textbf{Need to add labels and label-matching to untyped language above}
+
 
 \subsection{W-types}
+
+To give types to the W-structures described in Section~\ref{sec:wstruct} above,
+Bend uses a form of W-types, introduced by Martin-L\"of~\cite{Mar84} (see also
+the exposition in~\cite{mlttprog}).
+
+We continue our extension of the syntax defined above, with the following addition:
+\[
+\begin{array}{lllll}
+  \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \w{L}{N}{R} 
+\end{array}
+\]
+\noindent This new primitive type form is meant to abstract
+W-structures $\ctor{l}{n}{f}$, where (to recall) $l$ is a label
+indicating which constructor is used, $n$ is the nonrecursive data,
+and $f$ is a function returning subdata.  To type such a construction,
+we clearly need:
+\begin{itemize}
+\item a type $L$ for the label $l$
+\item a type constructor $N$ where $N\ l$ is the type for the nonrecursive data
+\item a type constructor $R$ where $R\ l$ is the type for inputs to the function $f$
+\end{itemize}
+\noindent $N$ and $R$ are type constructors (that is, functions returning types), because
+we need to describe the types for each possible label $l$.  So given a label $l$, we need
+to know what the type will be for nonrecursive data of a construction labeled $l$, for example.
+In the case of the recursive subdata, only the input type of $f$ needs to be specified, because the output
+type is determined already: given an index (like the natural number $i$ selecting the $i$'th smaller
+ordinal for a \textit{Limit}), $f$ returns a piece of subdata, which recursively
+has the W-type again.  The proposed syntax is $\w{L}{N}{R}$.
+
+Following the above discussion, $\w{L}{N}{R}$ should have kind $\star$
+(so it is a type) assuming
+\begin{itemize}
+\item $L$ has kind $\star$
+\item $N$ and $R$ both have kind $L \to \star$
+\end{itemize}
+
+\noindent If one wanted to ensure that the top-level syntactic form of an expression
+determined whether that expression is a term, type, or kind, then it would be necessary
+to pick a slightly different syntax, maybe $\wb{L}{N}{R}$ or (if one avoids Unicode) $\wc{L}{N}{R}$.
+In my opinion, it is rather nicer just to reuse the term syntax, if possible, the way
+Haskell does for tuples as values and tuple types (for example, $(\textit{True},\textit{"hi"}) : (\textit{Bool},\textit{String})$).
+
+The typing rule for W-types as just described would then be:
+\[
+\infer{ \Gamma \vdash \w{L}{N}{R} : \star}{\Gamma \vdash L : \star & \Gamma \vdash N : L \to \star  & \Gamma \vdash R : L \to \star }
+\]
+\noindent This records exactly the same information as in the informal
+description: the three premises just say what we wrote above, that $L$
+has kind $\star$ ($L : \star$), and so forth.  Usually typing rules
+prove statements of the form $\Gamma \vdash t : T$, where $\Gamma$ is
+a set of assumptions about the types or kinds of free variables.  But
+for W-types we will not need to modify the typing context, so it can
+just be elided throughout the rules.  This will make them easier to
+read.
+
+\subsubsection{Typing rule for W-structures}
+
+Now let us see the typing rule for constructions $\ctor{l}{n}{f}$.  For this
+to have a W-type of the form $\w{L}{N}{R}$ we were just discussing, what has
+to be true?
+
+\begin{itemize}
+\item The label $l$ certainly has to have the type $L$ for labels.
+\item The nonrecursive data $n$ should have the type $N\ l$ that
+  the type constructor says should be there if the label is $l$.
+\item The function $f$ needs to take in a value of type $R\ l$,
+  because this is the type for indices into the collection of subdata,
+  and such an index is what $f$ expects as input. It should return a
+  result of the W-type, namely the subdata for the given index..
+\end{itemize}
+
+Formalizing these ideas, we get the following typing rule:
+\[
+\infer{\Gamma \vdash \ctor{l}{n}{f} : \w{L}{N}{R}}
+      {\Gamma \vdash l : L & \Gamma \vdash n : N\ l & \Gamma \vdash f : R\ l \to \w{L}{N}{R}}
+      \]
+      
+\subsubsection{Typing rule for recursion}
+
+A recursion $\wrec{R}{t}$ takes in a function $R$ and a value $t$ of the W-type.
+Recalling the computation rule will help us understand what the typing of a recursion
+should be:
+\[
+\wrec{R}{\ctor{l}{n}{f}} \ \ = \ \ R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\]
+\noindent We know from the typing rule for constructions that for some $L$, $N$, and $R$, we will have
+\[
+\begin{array}{lll}
+  l & : & L \\
+  n & : & N\ l \\
+  f & : & R\ l \to \w{L}{N}{R}
+\end{array}
+\]
+\noindent Since $R$ takes in those inputs on the right-hand side of the computation rule,
+we know that the type of $R$ must look like:
+\[
+\Pia{l}{L}{\Pia{n}{N\ l}{\Pia{f}{R\ l \to \w{L}{N}{R}}{\cdots}}}
+\]
+\noindent We just need to fill in the missing part of this type.  We expect that
+the recursion is going to compute a value of some type constructor $C$ which might
+be a function of the input value $\ctor{l}{n}{f}$.  So $C$ will have kind
+\[
+\w{L}{N}{R} \to \star
+\]
+\noindent This is similar to how a recursion on natural numbers $n$ can compute a value of type $P\ n$,
+which is used, for example, when reasoning by induction on $n$.  Now what type will the final (fourth)
+input of $R$ on the right-hand side of the computation rule have?  That input is
+\[
+\lam{x}{\wrec{R}{(f\ x)}}
+\]
+\noindent It is taking in a value of type $R\ l$, just as the subdata function $f$ does.  And it returns
+a value of type $C$ (since it is recursing).  $C$ depends on the input to the recursion, so in this case,
+since $f\ x$ is the input, the result of the recursion will have type $C\ (f\ x)$.  This means that the
+type for $\lam{x}{\wrec{R}{(f\ x)}}$ is
+\[
+\Pia{x}{R\ l}{C\ (f\ x)}
+\]
+\noindent Putting all this together, the type of $R$ should be:
+\[
+\begin{array}{l}
+  \Pia{l}{L}{\ }\\
+  \Pia{n}{N\ l}{\ }\\
+  \Pia{f}{R\ l \to \w{L}{N}{R}}{\ } \\
+  (\Pia{x}{R\ l}{C\ (f\ x)}) \to \\
+  C\ \ctor{l}{n}{f}
+  \end{array}
+\]
+\noindent Finally, the type of $\wrec{R}{d}$ is $C\ d$.  So if we think of $\wrec{R}{d}$
+as a proof by induction, it is saying that to prove a property $C$ of some value $d$ of
+type $\w{L}{N}{R}$, it is sufficent to assume
+
+\begin{itemize}
+\item $l : L$
+\item $n : N\ l$
+\item $f:R\ l \to \w{L}{N}{R}$
+\end{itemize}
+
+\noindent and show $C\ \ctor{l}{n}{f}$, assuming for induction hypothesis
+\[
+\Pia{x}{R\ l}{C\ (f\ x)}
+\]
+\noindent That type expresses that $C$ holds for all the subdata that $f$ can produce.
+
+Putting this all into one rather indigestible rule, we have:
+\[
+\infer{\Gamma \vdash \wrec{R}{d} : C\ d}
+      {
+        \begin{array}{lll}
+\Gamma \vdash R : & \Pia{l}{L}{\ }  \\
+\ &  \Pia{n}{N\ l}{\ }  \\
+\ &  \Pia{f}{R\ l \to \w{L}{N}{R}}{\ }  \\
+\ &  (\Pia{x}{R\ l}{C\ (f\ x)}) \to  \\
+\ &  C\ \ctor{l}{n}{f} \\
+\Gamma\vdash d : & \w{L}{R}{R}
+        \end{array} }
+      \]
+
 
 
 \subsection{An extensional equality type}
 
-We extend the syntax defined in Figure~\ref{fig:ccsyn} with the following additions:
+We continue our extension of the syntax of types and type-annotated terms with the following additions:
 \[
 \begin{array}{lllll}
   \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \eqtm{t}{T}{t'} \\
@@ -531,14 +735,15 @@ construct, the proof $s$ of the equality is discarded by erasure.
 This makes a huge difference in working with terms where equality
 proofs are used to change the types of subterms, because in
 Church-style type theory, one can end up with stuck coercions: an
-equality proof is being used to change the type of some subterm,
-but it ends up blocking reduction or reasoning about the term.
-One could have a stuck coercion around a $\lambda$-abstraction,
-for example, that is being applied to an argument.  The coercion
-would block the $\beta$-reduction step, because it is in between
-the function and the argument.  With this approach, however,
-the equality proofs are all erased, and such stuck terms do
-not arise.  
+equality proof is being used to change the type of some subterm, but
+it ends up blocking reduction or reasoning about the term.  This can
+happen if the equality proof either is an assumption (i.e., a
+variable) or derived from one.  One could have a stuck coercion around
+a $\lambda$-abstraction, for example, that is being applied to an
+argument.  The coercion would block the $\beta$-reduction step,
+because it is in between the function and the argument.  With the
+proposed approach, however, the equality proofs are all erased, and
+such stuck terms do not arise.
 
 
 \begin{figure}
@@ -578,6 +783,9 @@ not arise.
 
 \section{Metatheory of Bend's programming language}
 \label{sec:opmeta}
+
+\section{Metatheory of Bend's type system}
+\label{sec:ttmeta}
 
 \bibliographystyle{plain}
 \bibliography{main}
