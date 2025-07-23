@@ -152,7 +152,7 @@ which will return term $t_i$ if applied to label $l_i$.
   \[
   \begin{array}{llll}
     \textit{Variables}  & x,y,z,\ldots & \ &\ \\
-    \textit{labels}  & l & \ &\ \\ 
+    \textit{Labels}  & l & \ &\ \\ 
     \textit{Machine integers}  & i,j,\ldots & ::= & 0\ |\ 1\ | \ \cdots \\
     \textit{Arithmetic operators} & o & ::= & +\ |\ *\ |\ \cdots \\        
     \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ l\ |\ t\ o\ t'\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
@@ -264,7 +264,7 @@ piece of data $\ctor{s}{n}{f}$, that function $r$ will be invoked with
 the selector $s$, the nonrecursive subdata $n$, and the function $f$,
 which $r$ can then call as needed to obtain subdata.  The fourth
 argument to $r$ is the value that $r$ will use for $q$, namely
-$\lam{x}{\wrec{R}{(f\ x)}}$.  That function takes in an index $x$, and
+$\lam{x}{\wrec{r}{(f\ x)}}$.  That function takes in an index $x$, and
 recursively invokes the recursor on the $x$'th piece of subdata, given
 by $f\ x$.  
 
@@ -316,7 +316,7 @@ minimality.
 \begin{array}{l}
   \begin{array}{lll}
     (\lam{x}{s})\ t & \leadsto & [t/x]s \\
-    \wrec{R}{\ctor{s}{n}{f}} & \leadsto & R\ s\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}}) \\
+    \wrec{r}{\ctor{s}{n}{f}} & \leadsto & R\ s\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}}) \\
     i\ o\ i' & \leadsto & j\ \ \textnormal{according to machine semantics for }o \\
     \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}\ l_i & \leadsto & t_i\ \ \textnormal{if } i\in[1,k]
   \end{array}
@@ -627,11 +627,11 @@ Formalizing these ideas, we get the following typing rule:
       
 \subsubsection{Typing rule for recursion}
 
-A recursion $\wrec{R}{t}$ takes in a function $R$ and a value $t$ of the W-type.
+A recursion $\wrec{r}{t}$ takes in a function $R$ and a value $t$ of the W-type.
 Recalling the computation rule will help us understand what the typing of a recursion
 should be:
 \[
-\wrec{R}{\ctor{s}{n}{f}} \ \ = \ \ R\ s\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\wrec{r}{\ctor{s}{n}{f}} \ \ = \ \ R\ s\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}})
 \]
 \noindent We know from the typing rule for constructions that for some $S$, $N$, and $R$, we will have
 \[
@@ -656,12 +656,12 @@ be a function of the input value $\ctor{s}{n}{f}$.  So $C$ will have kind
 which is used, for example, when reasoning by induction on $n$.  Now what type will the final (fourth)
 input of $R$ on the right-hand side of the computation rule have?  That input is
 \[
-\lam{x}{\wrec{R}{(f\ x)}}
+\lam{x}{\wrec{r}{(f\ x)}}
 \]
 \noindent It is taking in a value of type $R\ s$, just as the subdata function $f$ does.  And it returns
 a value of type $C$ (since it is recursing).  $C$ depends on the input to the recursion, so in this case,
 since $f\ x$ is the input, the result of the recursion will have type $C\ (f\ x)$.  This means that the
-type for $\lam{x}{\wrec{R}{(f\ x)}}$ is
+type for $\lam{x}{\wrec{r}{(f\ x)}}$ is
 \[
 \Pia{x}{R\ s}{C\ (f\ x)}
 \]
@@ -675,7 +675,7 @@ type for $\lam{x}{\wrec{R}{(f\ x)}}$ is
   C\ \ctor{s}{n}{f}
   \end{array}
 \]
-\noindent Finally, the type of $\wrec{R}{d}$ is $C\ d$.  So if we think of $\wrec{R}{d}$
+\noindent Finally, the type of $\wrec{r}{d}$ is $C\ d$.  So if we think of $\wrec{r}{d}$
 as a proof by induction, it is saying that to prove a property $C$ of some value $d$ of
 type $\w{S}{N}{R}$, it is sufficent to assume
 
@@ -693,10 +693,13 @@ type $\w{S}{N}{R}$, it is sufficent to assume
 
 Putting this all into one rather indigestible rule, we have:
 \[
-\infer{\Gamma \vdash \wrec{R}{d} : C\ d}
+\infer{\Gamma \vdash \wrec{r}{d} : C\ d}
       {
         \begin{array}{lll}
-\Gamma \vdash R : & \Pia{s}{S}{\ }  \\
+\Gamma \vdash S : & \star \\
+\Gamma \vdash N : & S \to \star \\
+\Gamma \vdash R : & R \to \star \\          
+\Gamma \vdash r : & \Pia{s}{S}{\ }  \\
 \ &  \Pia{n}{N\ s}{\ }  \\
 \ &  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ }  \\
 \ &  (\Pia{x}{R\ s}{C\ (f\ x)}) \to  \\
