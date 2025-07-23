@@ -115,8 +115,13 @@ reliability of the language design.
 
 The syntax of Bend's core programming language is shown in
 Figure~\ref{fig:pl}.  Programs, called terms, can be variables $x$,
-machine integers $i$, or infix applications $t\ o\ t'$ of arithmetic
-operators $o$ to arguments $t$ and $t'$.  They can also be anonymous
+machine integers $i$, or labels $l$.  Labels will be used to
+distinguish between different kinds of data, and they could be
+implemented just by machine integers as well.  There are also infix
+applications $t\ o\ t'$ of arithmetic operators $o$ to arguments $t$
+and $t'$.
+
+Terms can also be anonymous
 functions $\lam{x}{s}$, with the restriction that $x$ may be used at
 most once in $s$.  Some restriction is needed, or else it is very easy
 to write diverging $\lambda$-terms.  Traditionally, type theories have
@@ -139,14 +144,19 @@ have a separate trivial piece of data.  That is $\wunit$.  We have a
 way to form structured data $\ctor{l}{n}{r}$, and a term $\wrec{r}{t}$
 for recursing over such data.  These constructs constitute a version of
 what is known as W-types, and they will be presented in detail below.
+Finally, there is a label-matching function $\{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}$,
+which will return term $t_i$ if applied to label $l_i$. 
+
 
 \begin{figure}
   \[
   \begin{array}{llll}
     \textit{Variables}  & x,y,z,\ldots & \ &\ \\
+    \textit{labels}  & l & \ &\ \\ 
     \textit{Machine integers}  & i,j,\ldots & ::= & 0\ |\ 1\ | \ \cdots \\
     \textit{Arithmetic operators} & o & ::= & +\ |\ *\ |\ \cdots \\        
-    \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ t\ o\ t'\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t}
+    \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ l\ |\ t\ o\ t'\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
+    \ &\ &\ & \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}
   \end{array}
 \]
 \caption{The syntax for Bend's programming language.  In $\lambda$-abstractions, the variable $x$ is allowed
@@ -212,7 +222,7 @@ for recursively processing a structure.
 
 A structure $\ctor{l}{n}{f}$ consists of three parts:
 \begin{itemize}
-\item a \emph{label} $l$, to describe what kind of structure this is
+\item a \emph{selector} $s$, which indicates what kind of structure this is
 \item nonrecursive subdata $n$, which will not be recursively processed
   by recursions $\wrec{r}{t}$
 \item a recursive subdata function $f$, which takes in an index $x$
@@ -231,10 +241,12 @@ can have infinitely many immediate subdata.  There is still a
 restriction, though.  While there may be infinitely many paths through
 a structure, each path is finite.  This enables us to define
 $\wrec{r}{t}$ as a form of terminating recursion over structures,
-because we cannot recurse infinitely deeply into a structure.
+because we cannot recurse infinitely deeply into a structure.  Note
+that for representing particular datatypes below, the selectors will
+always just be labels, but the definition does not require this.
 
 For recursions $\wrec{r}{t}$ over a structure $t$, we write a function
-$r$ which takes the structure's label, nonrecursive subdata, and
+$r$ which takes the structure's selector, nonrecursive subdata, and
 subdata function.  $r$ also is provided a function $q$ that returns
 recursive results.  Then $r$  returns a result, generally by calling
 $q$.  For each possible input to $f$, the function $q$ returns the
@@ -248,8 +260,8 @@ explains how recursions work computationally, is:
 \]
 
 \noindent So someone using the recursor writes $r$, and then for each
-piece of data $\ctor{l}{n}{f}$, that function $r$ will be invoked with
-the label $l$, the nonrecursive subdata $n$, and the function $f$,
+piece of data $\ctor{s}{n}{f}$, that function $r$ will be invoked with
+the selector $s$, the nonrecursive subdata $n$, and the function $f$,
 which $r$ can then call as needed to obtain subdata.  The fourth
 argument to $r$ is the value that $r$ will use for $q$, namely
 $\lam{x}{\wrec{R}{(f\ x)}}$.  That function takes in an index $x$, and
@@ -277,27 +289,36 @@ calculus.  It uses the notation $[t/x]s$ to denote the result of
 substituting $t$ for $x$ in $s$.  This should be done in a standard
 way to avoid capturing free variables of $t$ as one passes under
 $\lambda$-abstractions in $s$.  There is also the reduction rule for
-W-structures, mentioned above.  The two rule inference rules
-at the bottom of the figure then define multi-step reduction $\leadsto^*$
-in terms of single-step reduction $\leadsto$.  The first rule says
-that if you can single-step reduce $s$ to $t$, then you can do a multi-step
-reduction of a term containing $s$ some finite number of times to one
-containing instead $t$.  The term $r$ mentioned in the rule might
-not contain $x$ at all, in which case we get reflexivity of $\leadsto^*$,
-as the rule will say that $r \leadsto^* r$ in that situation.
+W-structures, mentioned above.  The semantics as presented here does
+not specify the exact behavior of the machine operations on integers.
+Those can be specified in detail later as needed.  Finally, there is a
+reduction rule for applying a label-matching function $\{ l_1 \mapsto
+t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}$ to a label $l_i$, where
+$i\in\{1,\ldots,k\}$.  The term reduces to $t_k$ in that case.
+Applying a label-matching function to any other argument does not
+reduce.  It is a stuck term, and we will impose typing
+(Section~\ref{sec:tp} below) to prevent such terms from arising.
 
-The semantics as presented here does not specify the exact behavior of the machine operations
-on integers.  Those can be specified in detail later as needed.  It is noteworthy that the
-semantics is quite compact, in terms of numbers of rules needed to define it.  This is
-in keeping with Bend's goal of minimality.
+The two rule inference rules at the bottom of the figure then define
+multi-step reduction $\leadsto^*$ in terms of single-step reduction
+$\leadsto$.  The first rule says that if you can single-step reduce
+$s$ to $t$, then you can do a multi-step reduction of a term
+containing $s$ some finite number of times to one containing instead
+$t$.  The term $r$ mentioned in the rule might not contain $x$ at all,
+in which case we get reflexivity of $\leadsto^*$, as the rule will say
+that $r \leadsto^* r$ in that situation.  It is noteworthy that the
+semantics overall is quite compact, in terms of numbers of rules
+needed to define it.  This is in keeping with Bend's goal of
+minimality.
 
 \begin{figure}
   \[
 \begin{array}{l}
   \begin{array}{lll}
     (\lam{x}{s})\ t & \leadsto & [t/x]s \\
-    \wrec{R}{\ctor{l}{n}{f}} & \leadsto & R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}}) \\
-    i\ o\ i' & \leadsto & j\ \ \textnormal{according to machine semantics for }o
+    \wrec{R}{\ctor{s}{n}{f}} & \leadsto & R\ s\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}}) \\
+    i\ o\ i' & \leadsto & j\ \ \textnormal{according to machine semantics for }o \\
+    \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}\ l_i & \leadsto & t_i\ \ \textnormal{if } i\in[1,k]
   \end{array}
   \\ \\
   \begin{array}{lll}
@@ -311,6 +332,7 @@ in keeping with Bend's goal of minimality.
   \end{figure}
 
 \section{Typing}
+\label{sec:tp}
 
 Having proposed a syntax and reduction semantics for Bend, let us now
 consider typing.  We can describe Bend's proposed type system very
@@ -504,87 +526,103 @@ We extend the syntax of CC defined in Figure~\ref{fig:ccsyn} above, with the fol
   \textit{Tm} & \ni & r,s,t & ::= & \ldots\ |\ l\ |\ \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k \mapsto t_k \}
 \end{array}
 \]
-\noindent
+\noindent Then type-level reduction is extended:
+\[
+\{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} \ l_i \ \leadsto\ T_i\ \ \textnormal{if } i \in [1,k]
+\]
+\noindent Typing and kinding are extended in Figure~\ref{fig:enumtp}.
+Label-matching functions at the term level are dependently typed: in
+the \textsc{match} rule, the return type of the function is allowed to
+depend on the input label $x$.  We do not have a similar dependency
+for label-matching functions at the type level, because CC does not
+have kind-level $\lambda$-abstractions.
 
-\textbf{Need to add labels and label-matching to untyped language above}
+\begin{figure}
+  \begin{mathpar}
+    \inferrule[enum]{\ }{\Gamma \vdash \{l_1,\ldots,l_k \} : \star}
+
+    \inferrule[t-match]{\all{i\in[1,k]}{\Gamma\vdash T_i : \kappa}}
+                       { \{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} :  \{ l_1, \ldots, l_k \} \to \kappa}
+  
+    \inferrule[match]{\all{i\in[1,k]}{\Gamma\vdash t_i : T\ l_i}}
+              { \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k \mapsto t_k \} :  \Pia{x}{\{ l_1, \ldots, l_k \}}{T\ x}}
+  \end{mathpar}
+\caption{Typing and kinding for enumerated types}
+\label{fig:enumtp}
+\end{figure}
+
 
 
 \subsection{W-types}
 
-To give types to the W-structures described in Section~\ref{sec:wstruct} above,
-Bend uses a form of W-types, introduced by Martin-L\"of~\cite{Mar84} (see also
-the exposition in~\cite{mlttprog}).
-
-We continue our extension of the syntax defined above, with the following addition:
+To give types to the W-structures described in
+Section~\ref{sec:wstruct} above, Bend uses a form of W-types,
+introduced by Martin-L\"of~\cite{Mar84} (see also the exposition
+in~\cite{mlttprog}).  Our syntax is further extended as so:
 \[
 \begin{array}{lllll}
   \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \w{L}{N}{R} 
 \end{array}
 \]
 \noindent This new primitive type form is meant to abstract
-W-structures $\ctor{l}{n}{f}$, where (to recall) $l$ is a label
+W-structures $\ctor{s}{n}{f}$, where (to recall) $s$ is a selector
 indicating which constructor is used, $n$ is the nonrecursive data,
 and $f$ is a function returning subdata.  To type such a construction,
 we clearly need:
 \begin{itemize}
-\item a type $L$ for the label $l$
-\item a type constructor $N$ where $N\ l$ is the type for the nonrecursive data
-\item a type constructor $R$ where $R\ l$ is the type for inputs to the function $f$
+\item a type $S$ for the selector $s$
+\item a type constructor $N$ where $N\ s$ is the type for the nonrecursive data
+\item a type constructor $R$ where $R\ s$ is the type for inputs to the function $f$
 \end{itemize}
 \noindent $N$ and $R$ are type constructors (that is, functions returning types), because
-we need to describe the types for each possible label $l$.  So given a label $l$, we need
-to know what the type will be for nonrecursive data of a construction labeled $l$, for example.
+we need to describe the types for each possible selector $s$.  So given $s$, we need
+to know what the type will be for nonrecursive data.
 In the case of the recursive subdata, only the input type of $f$ needs to be specified, because the output
 type is determined already: given an index (like the natural number $i$ selecting the $i$'th smaller
 ordinal for a \textit{Limit}), $f$ returns a piece of subdata, which recursively
-has the W-type again.  The proposed syntax is $\w{L}{N}{R}$.
+has the W-type again.  The proposed syntax is $\w{S}{N}{R}$.
 
-Following the above discussion, $\w{L}{N}{R}$ should have kind $\star$
+Following the above discussion, $\w{S}{N}{R}$ should have kind $\star$
 (so it is a type) assuming
 \begin{itemize}
-\item $L$ has kind $\star$
-\item $N$ and $R$ both have kind $L \to \star$
+\item $S$ has kind $\star$
+\item $N$ and $R$ both have kind $S \to \star$
 \end{itemize}
 
 \noindent If one wanted to ensure that the top-level syntactic form of an expression
 determined whether that expression is a term, type, or kind, then it would be necessary
-to pick a slightly different syntax, maybe $\wb{L}{N}{R}$ or (if one avoids Unicode) $\wc{L}{N}{R}$.
+to pick a slightly different syntax, maybe $\wb{S}{N}{R}$ or (if one avoids Unicode) $\wc{S}{N}{R}$.
 In my opinion, it is rather nicer just to reuse the term syntax, if possible, the way
 Haskell does for tuples as values and tuple types (for example, $(\textit{True},\textit{"hi"}) : (\textit{Bool},\textit{String})$).
 
 The typing rule for W-types as just described would then be:
 \[
-\infer{ \Gamma \vdash \w{L}{N}{R} : \star}{\Gamma \vdash L : \star & \Gamma \vdash N : L \to \star  & \Gamma \vdash R : L \to \star }
+\infer{ \Gamma \vdash \w{S}{N}{R} : \star}{\Gamma \vdash S : \star & \Gamma \vdash N : S \to \star  & \Gamma \vdash R : S \to \star }
 \]
 \noindent This records exactly the same information as in the informal
-description: the three premises just say what we wrote above, that $L$
-has kind $\star$ ($L : \star$), and so forth.  Usually typing rules
-prove statements of the form $\Gamma \vdash t : T$, where $\Gamma$ is
-a set of assumptions about the types or kinds of free variables.  But
-for W-types we will not need to modify the typing context, so it can
-just be elided throughout the rules.  This will make them easier to
-read.
+description: the three premises just say what we wrote above, that $S$
+has kind $\star$ ($S : \star$), and so forth.  
 
 \subsubsection{Typing rule for W-structures}
 
-Now let us see the typing rule for constructions $\ctor{l}{n}{f}$.  For this
-to have a W-type of the form $\w{L}{N}{R}$ we were just discussing, what has
+Now let us see the typing rule for constructions $\ctor{s}{n}{f}$.  For this
+to have a W-type of the form $\w{S}{N}{R}$ we were just discussing, what has
 to be true?
 
 \begin{itemize}
-\item The label $l$ certainly has to have the type $L$ for labels.
-\item The nonrecursive data $n$ should have the type $N\ l$ that
-  the type constructor says should be there if the label is $l$.
-\item The function $f$ needs to take in a value of type $R\ l$,
+\item The selector $s$ certainly has to have the type $S$.
+\item The nonrecursive data $n$ should have the type $N\ s$ that
+  the type constructor says should be there if the selector is $s$.
+\item The function $f$ needs to take in a value of type $R\ s$,
   because this is the type for indices into the collection of subdata,
   and such an index is what $f$ expects as input. It should return a
-  result of the W-type, namely the subdata for the given index..
+  result of the W-type, namely the subdata for the given index.
 \end{itemize}
 
 Formalizing these ideas, we get the following typing rule:
 \[
-\infer{\Gamma \vdash \ctor{l}{n}{f} : \w{L}{N}{R}}
-      {\Gamma \vdash l : L & \Gamma \vdash n : N\ l & \Gamma \vdash f : R\ l \to \w{L}{N}{R}}
+\infer{\Gamma \vdash \ctor{s}{n}{f} : \w{S}{N}{R}}
+      {\Gamma \vdash s : S & \Gamma \vdash n : N\ s & \Gamma \vdash f : R\ s \to \w{S}{N}{R}}
       \]
       
 \subsubsection{Typing rule for recursion}
@@ -593,26 +631,26 @@ A recursion $\wrec{R}{t}$ takes in a function $R$ and a value $t$ of the W-type.
 Recalling the computation rule will help us understand what the typing of a recursion
 should be:
 \[
-\wrec{R}{\ctor{l}{n}{f}} \ \ = \ \ R\ l\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
+\wrec{R}{\ctor{s}{n}{f}} \ \ = \ \ R\ s\ n\ f\ (\lam{x}{\wrec{R}{(f\ x)}})
 \]
-\noindent We know from the typing rule for constructions that for some $L$, $N$, and $R$, we will have
+\noindent We know from the typing rule for constructions that for some $S$, $N$, and $R$, we will have
 \[
 \begin{array}{lll}
-  l & : & L \\
-  n & : & N\ l \\
-  f & : & R\ l \to \w{L}{N}{R}
+  s & : & S \\
+  n & : & N\ s \\
+  f & : & R\ s \to \w{S}{N}{R}
 \end{array}
 \]
 \noindent Since $R$ takes in those inputs on the right-hand side of the computation rule,
 we know that the type of $R$ must look like:
 \[
-\Pia{l}{L}{\Pia{n}{N\ l}{\Pia{f}{R\ l \to \w{L}{N}{R}}{\cdots}}}
+\Pia{s}{S}{\Pia{n}{N\ s}{\Pia{f}{R\ s \to \w{S}{N}{R}}{\cdots}}}
 \]
 \noindent We just need to fill in the missing part of this type.  We expect that
 the recursion is going to compute a value of some type constructor $C$ which might
-be a function of the input value $\ctor{l}{n}{f}$.  So $C$ will have kind
+be a function of the input value $\ctor{s}{n}{f}$.  So $C$ will have kind
 \[
-\w{L}{N}{R} \to \star
+\w{S}{N}{R} \to \star
 \]
 \noindent This is similar to how a recursion on natural numbers $n$ can compute a value of type $P\ n$,
 which is used, for example, when reasoning by induction on $n$.  Now what type will the final (fourth)
@@ -620,36 +658,36 @@ input of $R$ on the right-hand side of the computation rule have?  That input is
 \[
 \lam{x}{\wrec{R}{(f\ x)}}
 \]
-\noindent It is taking in a value of type $R\ l$, just as the subdata function $f$ does.  And it returns
+\noindent It is taking in a value of type $R\ s$, just as the subdata function $f$ does.  And it returns
 a value of type $C$ (since it is recursing).  $C$ depends on the input to the recursion, so in this case,
 since $f\ x$ is the input, the result of the recursion will have type $C\ (f\ x)$.  This means that the
 type for $\lam{x}{\wrec{R}{(f\ x)}}$ is
 \[
-\Pia{x}{R\ l}{C\ (f\ x)}
+\Pia{x}{R\ s}{C\ (f\ x)}
 \]
 \noindent Putting all this together, the type of $R$ should be:
 \[
 \begin{array}{l}
-  \Pia{l}{L}{\ }\\
-  \Pia{n}{N\ l}{\ }\\
-  \Pia{f}{R\ l \to \w{L}{N}{R}}{\ } \\
-  (\Pia{x}{R\ l}{C\ (f\ x)}) \to \\
-  C\ \ctor{l}{n}{f}
+  \Pia{s}{S}{\ }\\
+  \Pia{n}{N\ s}{\ }\\
+  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ } \\
+  (\Pia{x}{R\ s}{C\ (f\ x)}) \to \\
+  C\ \ctor{s}{n}{f}
   \end{array}
 \]
 \noindent Finally, the type of $\wrec{R}{d}$ is $C\ d$.  So if we think of $\wrec{R}{d}$
 as a proof by induction, it is saying that to prove a property $C$ of some value $d$ of
-type $\w{L}{N}{R}$, it is sufficent to assume
+type $\w{S}{N}{R}$, it is sufficent to assume
 
 \begin{itemize}
-\item $l : L$
-\item $n : N\ l$
-\item $f:R\ l \to \w{L}{N}{R}$
+\item $s : S$
+\item $n : N\ s$
+\item $f:R\ s \to \w{S}{N}{R}$
 \end{itemize}
 
-\noindent and show $C\ \ctor{l}{n}{f}$, assuming for induction hypothesis
+\noindent and show $C\ \ctor{s}{n}{f}$, assuming for induction hypothesis
 \[
-\Pia{x}{R\ l}{C\ (f\ x)}
+\Pia{x}{R\ s}{C\ (f\ x)}
 \]
 \noindent That type expresses that $C$ holds for all the subdata that $f$ can produce.
 
@@ -658,12 +696,12 @@ Putting this all into one rather indigestible rule, we have:
 \infer{\Gamma \vdash \wrec{R}{d} : C\ d}
       {
         \begin{array}{lll}
-\Gamma \vdash R : & \Pia{l}{L}{\ }  \\
-\ &  \Pia{n}{N\ l}{\ }  \\
-\ &  \Pia{f}{R\ l \to \w{L}{N}{R}}{\ }  \\
-\ &  (\Pia{x}{R\ l}{C\ (f\ x)}) \to  \\
-\ &  C\ \ctor{l}{n}{f} \\
-\Gamma\vdash d : & \w{L}{R}{R}
+\Gamma \vdash R : & \Pia{s}{S}{\ }  \\
+\ &  \Pia{n}{N\ s}{\ }  \\
+\ &  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ }  \\
+\ &  (\Pia{x}{R\ s}{C\ (f\ x)}) \to  \\
+\ &  C\ \ctor{s}{n}{f} \\
+\Gamma\vdash d : & \w{S}{R}{R}
         \end{array} }
       \]
 
