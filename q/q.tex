@@ -17,9 +17,9 @@
 
 \include{definitions}
 
-\title{Proposal: a Type Theory for Bend}
+\title{System Q: Logical Soundness with Logically Unsound Types}
 
-\author{Aaron Stump}
+\author{Aaron Stump and Victor Taelin}
 
 \maketitle
 
@@ -53,13 +53,12 @@ program.
 
 Much theoretical effort has been expended on techniques for proving
 logical soundness of type theories, by showing that all programs
-are guaranteed to terminate.  Bend has a very interesting original
-approach to this problem, which we consider next.
+are guaranteed to terminate.  
 
-\section{Bend's approach to logical soundness}
+\section{A new approach to logical soundness}
 
 There are two current traditions for devising type theories, that
-should be mentioned for comparison with Bend's approach:
+should be mentioned for comparison:
 
 \begin{enumerate}
 \item \textbf{Church-style} type theory builds up a notion of typed
@@ -89,63 +88,63 @@ should be mentioned for comparison with Bend's approach:
   be thought of as properties of $\lambda$-terms''~\cite[page 43]{krivine93}.
 \end{enumerate}
 
-Bend's philosophy can be viewed as a strengthened form of Curry-style
-type theory, with the modified slogan: ``Terminating Computation
-First''.  The idea, proposed by Victor Taelin, is similar to
-Curry-style type theory, where one first defines type-free programs,
-and how they compute.  But differently, these programs are designed so
-that they are guaranteed to terminate, without reference to any notion
-of typing.  Just the structure of the programs and the rules for how
-the execute are sufficient to establish that all programs terminate.
-Giving a detailed proof of that fact is still not trivial, but
-expected to be much simpler than the approaches based on typing.  And
-then one has a lot of freedom to design a type system on top of the
-terminating type-free language.  Now the only requirement is that the
-language should have the usual type-safety property that ones expects
-of any statically typed programming language. This is vastly easier to
-achieve than crafting a type system that enforces termination.
+The philosophy we adopt here can be viewed as a strengthened form of
+Curry-style type theory, with the modified slogan: ``Terminating
+Computation First''.  The idea is similar to Curry-style type theory,
+where one first defines type-free programs, and how they compute.  But
+differently, these programs are designed so that they are guaranteed
+to terminate, without reference to any notion of typing.  Just the
+structure of the programs and the rules for how the execute are
+sufficient to establish that all programs terminate.  Giving a
+detailed proof of that fact is still not trivial, but expected to be
+much simpler than the approaches based on typing.  And then one has a
+lot of freedom to design a type system on top of the terminating
+type-free language.  Now the only requirement is that the language
+should have the usual type-safety property that ones expects of any
+statically typed programming language. This is vastly easier to
+achieve than crafting a type system that enforces termination.  It
+also opens the door to making use of exotic typing features that might
+not enforce termination.  Since termination is enforced already from
+the structure of untyped terms, we are free to adopt such types
+without losing logical soundness.
 
-As we begin our look at Bend, it is important to emphasize one further
-design goal for the language: minimality.  We aim to have a core
-language with a small number of primitive operations, and similarly
-for the type system.  This is both for ease of implementation, and
-reliability of the language design.
+This paper gives a particular example of this approach, in the form of
+a type theory we dub Q.  The untyped substrate of the theory is based
+on affine lambda calculus plus an affine-compatible form of
+W-structures (the untyped components of W-types).  There are two other
+design goals we pursue in this particular design: minimality and very
+expressive typing.  We aim to have a core language with a small number
+of primitive operations, and similarly for the type system.
+Furthermore, to demonstrate the power of the approach, we include the
+principle known as ``Type : Type'', which renders the type system very
+expressive, but is usually avoided because with this feature, the type
+system cannot enforce termination.  We emphasize that in our setting,
+the type system does not need to do this, because we ensure
+termination for the underlying language, without typing.
 
-\section{Bend's core language}
+\section{The untyped language of Q}
 
-The syntax of Bend's core programming language is shown in
-Figure~\ref{fig:pl}.  Programs, called terms, can be variables $x$,
-machine integers $i$, or labels $l$.  Labels will be used to
-distinguish between different kinds of data, and they could be
-implemented just by machine integers as well.  There are also infix
-applications $t\ o\ t'$ of arithmetic operators $o$ to arguments $t$
-and $t'$.
-
-Terms can also be anonymous
-functions $\lam{x}{s}$, with the restriction that $x$ may be used at
-most once in $s$.  Some restriction is needed, or else it is very easy
-to write diverging $\lambda$-terms.  Traditionally, type theories have
-restricted anonymous functions using types.  With Bend's approach to
-logical consistency, we need a type-free way to enforce termination of
-$\lambda$-terms.  One method is to restrict how often a variable may
-be used in an anonymous function.  Bend requires $\lambda$-bound
-variables to be used at most once.  Such $\lambda$-abstractions are
-called affine.  It is well known that this restriction ensures
-termination.  It does impose serious limits on programs written with
-anonymous functions, but we will see that the way recursion works
-expands the possibilities greatly (while preserving termination).
+The syntax of Q's untyped programming language is shown in
+Figure~\ref{fig:pl}.  Atomic terms are either variables $x$ or labels
+$l$.  Labels will be used to distinguish between different kinds of
+data.  Terms can also be anonymous functions $\lam{x}{s}$, with the
+restriction that $x$ may be used at most once in $s$.  Such
+$\lambda$-abstractions are called \emph{affine}.  Some restriction is
+needed, or else it is very easy to write diverging $\lambda$-terms.
+Traditionally, type theories have restricted anonymous functions using
+types.  Requiring $\lambda$-abstractions to be affine is a well-known
+if seldom used alternative.
 
 Returning to the syntax: we have applications $t\ t'$ of a term $t$
 being used as a function to term $t'$ given as the argument to that
-function.  We have a trivial piece of data $\wunit$, which is useful as
-a placehold.  We could use a machine integer $i$ as a base case
-instead, but we will see that with typing, it is more convenient to
-have a separate trivial piece of data.  That is $\wunit$.  We have a
-way to form structured data $\ctor{l}{n}{r}$, and a term $\wrec{r}{t}$
-for recursing over such data.  These constructs constitute a version of
-what is known as W-types, and they will be presented in detail below.
-Finally, there is a label-matching function $\{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}$,
-which will return term $t_i$ if applied to label $l_i$. 
+function.  We have a trivial piece of data $\wunit$, which is useful
+as a placehold.  We have a way to form structured data
+$\ctor{l}{n}{r}$, and a term $\wrec{r}{t}$ for recursing over such
+data.  These constructs constitute the untyped components of a version
+of what is known as W-types, and they will be presented in detail
+below.  Finally, there is a label-matching function $\{ l_1 \mapsto
+t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}$, which will return term $t_i$ if
+applied to label $l_i$.
 
 
 \begin{figure}
@@ -153,680 +152,15 @@ which will return term $t_i$ if applied to label $l_i$.
   \begin{array}{llll}
     \textit{Variables}  & x,y,z,\ldots & \ &\ \\
     \textit{Labels}  & l & \ &\ \\ 
-    \textit{Machine integers}  & i,j,\ldots & ::= & 0\ |\ 1\ | \ \cdots \\
-    \textit{Arithmetic operators} & o & ::= & +\ |\ *\ |\ \cdots \\        
-    \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ l\ |\ t\ o\ t'\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
+    \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ l\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
     \ &\ &\ & \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}
   \end{array}
 \]
-\caption{The syntax for Bend's programming language.  In $\lambda$-abstractions, the variable $x$ is allowed
+\caption{The syntax of Q's untyped language.  In $\lambda$-abstractions, the variable $x$ is allowed
   to occur at most once in the body $s$}
 \label{fig:pl}
 \end{figure}
 
-\subsection{Structured data}
-
-To implement data structures, every programming language needs some
-approach to creating and processing structured data.  In Bend, the
-main form of structured data is the construction $\ctor{l}{n}{r}$.
-Before we discuss this, though, it is very helpful to have a way of
-constructing pairs $(t,t')$.
-
-\subsubsection{Pairs}
-
-There are several possibilities for how to include pairs in Bend.
-Here we propose to $\lambda$-encode them.  So we take this definition:
-\[
-(t,t') := \lam{c}{c\ t\ t'}
-\]
-\noindent Syntactically, we propose to add pairs as primitive syntax,
-but the implementation of Bend will just treat them as defined.  There
-are two benefits to defining pairs this way.  First, we do not need to
-add another primitive construction for pairs to the semantics of the
-language: they are just defined using a $\lambda$-term.  Second, we
-gain affine access to the components of a pair: we can make use of a
-pair just once and still obtain both its components.  If instead we
-had primitive accessors like $p.1$ and $p.2$ for accessing the
-components of a pair $p$, we would not be able to write simple
-functions like the one that swaps the components of a pair, as an
-affine function.  For such a function would be written as
-\[
-\lam{p}{(p.2,p.1)}
-\]
-\noindent where we can see that the $\lambda$-bound input variable is used twice.
-Instead, we define swapping of pair $p$ as
-\[
-p\ \lam{x}{\lam{y}{(y,x)}}
-\]
-\noindent This looks a little peculiar, but recall that pairs are defined to be functions.
-So if $p$ is $(1,2)$, for example, then we will have this computational behavior:
-\[
-(1,2)\ \lam{x}{\lam{y}{(y,x)}} \ =\ (\lam{c}{c\ 1\ 2})\ \lam{x}{\lam{y}{(y,x)}}\ \leadsto\ (\lam{x}{\lam{y}{(y,x)}})\ 1\ 2 \leadsto^* (2,1)
-\]
-\noindent The input variable $c$ gets instantiated with
-$\lam{x}{\lam{y}{(y,x)}}$, giving that $\lambda$-term access to both
-components of the pair.  These $\lambda$-abstractions are all linear:
-the input variables $c$, $x$, and $y$ are used exactly once in the
-terms where they are $\lambda$-bound.
-
-\subsubsection{W-structures}
-\label{sec:wstruct}
-
-The construction $\ctor{l}{n}{f}$ will be called a W-structure (or just structure, for short).
-It is the basic form in Bend for recursively structured data.  The idea for structures
-comes from the type-theoretic construction known as W-types.  Indeed, Bend's structures
-are just a version of those for W-types.  Since Bend starts from a type-free programming
-language and then adds types, we start with W-structures, and define the W-types that
-describe them later.  We also have a primitive feature $\wrec{r}{t}$ of the language,
-for recursively processing a structure.
-
-A structure $\ctor{l}{n}{f}$ consists of three parts:
-\begin{itemize}
-\item a \emph{selector} $s$, which indicates what kind of structure this is
-\item nonrecursive subdata $n$, which will not be recursively processed
-  by recursions $\wrec{r}{t}$
-\item a recursive subdata function $f$, which takes in an index $x$
-  that specifies which piece of recursive subdata is desired, and
-  returns it.
-  \end{itemize}
-
-\noindent The index $x$ given to the subdata function $f$ is drawn
-from some finite set if the structure has only finitely many immediate
-subdata.  For example, a list node has one piece of subdata, namely
-the tail, while a node of a binary tree has two pieces of subdata.  So
-the indices would come from a one-element set and a two-element set,
-respectively.  But the power of W-structures comes from the fact that
-$i$ could also be from an infinite set, in which case the structure
-can have infinitely many immediate subdata.  There is still a
-restriction, though.  While there may be infinitely many paths through
-a structure, each path is finite.  This enables us to define
-$\wrec{r}{t}$ as a form of terminating recursion over structures,
-because we cannot recurse infinitely deeply into a structure.  Note
-that for representing particular datatypes below, the selectors will
-always just be labels, but the definition does not require this.
-
-For recursions $\wrec{r}{t}$ over a structure $t$, we write a function
-$r$ which takes the structure's selector, nonrecursive subdata, and
-subdata function.  $r$ also is provided a function $q$ that returns
-recursive results.  Then $r$  returns a result, generally by calling
-$q$.  For each possible input to $f$, the function $q$ returns the
-result of recursing on the subdata $f\ i$; that is, the $i$'th piece
-of subdata.  The recursor $\wrec{r}{t}$ uses this function $r$ to
-recursively process a structure $t$. The reduction rule, which
-explains how recursions work computationally, is:
-
-\[
-\wrec{r}{\ctor{l}{n}{f}} \leadsto r\ l\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}})
-\]
-
-\noindent So someone using the recursor writes $r$, and then for each
-piece of data $\ctor{s}{n}{f}$, that function $r$ will be invoked with
-the selector $s$, the nonrecursive subdata $n$, and the function $f$,
-which $r$ can then call as needed to obtain subdata.  The fourth
-argument to $r$ is the value that $r$ will use for $q$, namely
-$\lam{x}{\wrec{r}{(f\ x)}}$.  That function takes in an index $x$, and
-recursively invokes the recursor on the $x$'th piece of subdata, given
-by $f\ x$.  
-
-
-\subsection{Reduction semantics}
-
-Figure~\ref{fig:opsem} gives the complete reduction semantics for
-Bend.  This semantics specifies the meaning of programs by saying how
-they compute.  Calling it a ``reduction'' semantics indicates that we
-are not specifying a deterministic evaluation order for programs.
-There might be multiple choices of which part of a term to reduce
-next, and the rules does not specify which one should be chosen.  So
-the reduction relation is nondeterministic.  But we will show below
-(Section~\ref{sec:opmeta}) that all choices are guaranteed to lead to
-the same result.  It could happen that some choices lead to that
-result more efficiently.  But they all will, in principle, succeed.
-
-Returning to Figure~\ref{fig:opsem}: there are reduction rules for
-reducing terms where an anonymous function $\lam{x}{s}$ is applied to
-an argument $t$.  This is the well-known $\beta$-rule from lambda
-calculus.  It uses the notation $[t/x]s$ to denote the result of
-substituting $t$ for $x$ in $s$.  This should be done in a standard
-way to avoid capturing free variables of $t$ as one passes under
-$\lambda$-abstractions in $s$.  There is also the reduction rule for
-W-structures, mentioned above.  The semantics as presented here does
-not specify the exact behavior of the machine operations on integers.
-Those can be specified in detail later as needed.  Finally, there is a
-reduction rule for applying a label-matching function $\{ l_1 \mapsto
-t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}$ to a label $l_i$, where
-$i\in\{1,\ldots,k\}$.  The term reduces to $t_k$ in that case.
-Applying a label-matching function to any other argument does not
-reduce.  It is a stuck term, and we will impose typing
-(Section~\ref{sec:tp} below) to prevent such terms from arising.
-
-The two rule inference rules at the bottom of the figure then define
-multi-step reduction $\leadsto^*$ in terms of single-step reduction
-$\leadsto$.  The first rule says that if you can single-step reduce
-$s$ to $t$, then you can do a multi-step reduction of a term
-containing $s$ some finite number of times to one containing instead
-$t$.  The term $r$ mentioned in the rule might not contain $x$ at all,
-in which case we get reflexivity of $\leadsto^*$, as the rule will say
-that $r \leadsto^* r$ in that situation.  It is noteworthy that the
-semantics overall is quite compact, in terms of numbers of rules
-needed to define it.  This is in keeping with Bend's goal of
-minimality.
-
-\begin{figure}
-  \[
-\begin{array}{l}
-  \begin{array}{lll}
-    (\lam{x}{s})\ t & \leadsto & [t/x]s \\
-    \wrec{r}{\ctor{s}{n}{f}} & \leadsto & R\ s\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}}) \\
-    i\ o\ i' & \leadsto & j\ \ \textnormal{according to machine semantics for }o \\
-    \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}\ l_i & \leadsto & t_i\ \ \textnormal{if } i\in[1,k]
-  \end{array}
-  \\ \\
-  \begin{array}{lll}
-  \infer{[s/x]r \leadsto^* [t/x]r}{s \leadsto t} &\ \ &
-  \infer{r \leadsto^* t}{r \leadsto^* s & s \leadsto^* t}
-  \end{array}
-\end{array}  
-\]
-  \caption{Reduction semantics for Bend}
-  \label{fig:opsem}
-  \end{figure}
-
-\section{Typing}
-\label{sec:tp}
-
-Having proposed a syntax and reduction semantics for Bend, let us now
-consider typing.  We can describe Bend's proposed type system very
-succinctly: it is the (Curry-style) Calculus of Constructions plus a
-simple variant of W-types, and including also a primitive typed
-extensional equality type.  In this section, we will elaborate on
-this short description, one ingredient at a time.
-
-One overarching point: the type system is Curry-style, meaning that
-typing rules should be viewed as defining a typing relation on the
-untyped terms whose syntax is given above in Figure~\ref{fig:pl}.  But
-in this section, we will present the rules using annotated terms,
-which contain enough information to confirm a typing for a term.  An
-example is the annotated term $\tlam{x}{A}{t}$, with a type for the
-bound variable.  So the typing rules look like Church-style rules,
-computing types for terms that have various type annotations in them.
-But there is a critical difference.  With Curry-style typing, we are
-entitled to make use of an erasure function $|e|$ to drop all
-annotations from the term parts of expressions $e$.  This function is
-used in the conversion rule, allowing us to change the type $A$ of a
-term to a type $B$, if $|A|$ and $|B|$ are convertible.  Using erasure
-at conversion allows us to equate many more terms than with
-Church-style typing, and eliminates many difficult technical problems
-reasoning about annotated terms, which are encountered in Church-style
-type theory.
-
-
-\subsection{The Calculus of Constructions}
-
-\begin{figure}
-\[
-\begin{array}{lllll}
-  \textit{TyVar} & \ni & X,Y,Z & \ &\ \\
-  \textit{TmVar} & \ni & x,y,z & \ &\ \\\\
-  \textit{Knd} & \ni & \kappa & ::= & \star\ |\ \Pia{x}{T}{\kappa}\ |\ \Pia{x}{\kappa}{\kappa'} \\
-  \textit{Ty} & \ni & R,S,T & ::= &
-     X \ | \ \Pia{x}{T}{T'}\ |\ \Pia{X}{\kappa}{T}\ |\ \tlam{x}{T}{T'} \ |\ \tlam{X}{\kappa}{T}\ |\ T\ t\ |\ T\ T' \\\\
-  \textit{Tm} & \ni & r,s,t & ::= & x \ |\ \tlam{x}{T}{t}\ | \ \tlam{X}{\kappa}{t}\ |\ t\ t'\ |\ t\ T \ 
-\end{array}
-\]
-\caption{Syntax of CC}
-\label{fig:ccsyn}
-\end{figure}
-
-The syntax for the Curry-style Calculus of Constructions (CC) is
-listed in Figure~\ref{fig:ccsyn}.  The three main syntactic categories
-defined there are annotated terms (\textit{Tm}), types (\textit{Ty},
-and kinds (\textit{Knd}).  Types abstract terms, and kinds abstract
-types.  For example, every natural number is a term, abstracted by the
-type \textit{Nat}.  And every type (like \textit{Nat}) is abstracted
-by kind $\star$.  We also use meta-variable $e$ for any form of expression,
-whether term, type, or kind.  The typing rules are given in Figure~\ref{fig:tc}.
-
-Erasure, used in the conversion rules \textsc{conv} and
-\textsc{t-conv}, is defined in Figure~\ref{fig:erase}.  Erasure leaves
-the structure of types and kinds unchanged, but drops typing
-annotations from terms.  The conversion rules also reference a
-$\beta$-equality relation on kinds and types, respectively.  This
-relation is defined in Figure~\ref{fig:convcc}, which also defines
-$\beta$-reduction for the two possible kinds of type-level
-$\beta$-redexes of CC (one where the argument is a term, the other
-where it is a type).
-
-These typing rules for CC do not enforce that $\lambda$-abstractions
-are affine.  This requirement is to be imposed on the erasures on
-terms, and it is checked syntactically, without reference to typing.
-This is so that the termination of the system does not depend on
-typing.
-
-\begin{figure}
-  \begin{subfigure}[c]{1.0\textwidth}
-    \begin{mathpar}
-      \inferrule[type]{ }
-                      {\Gamma \vdash \star}
-
-      \inferrule[tk-pi]{\Gamma \vdash T : \star \\ \Gamma, x : T \vdash \kappa}
-                       {\Gamma \vdash \Pia{x}{T}{\kappa}}
-
-      \inferrule[kk-pi]{\Gamma \vdash \kappa \\ \Gamma, X : \kappa \vdash \kappa'}
-                       {\Gamma \vdash \Pia{X}{\kappa}{\kappa'}}
-    \end{mathpar}
-    \caption{Classifiable kinds}
-  \end{subfigure}
-  %%%%%%%%%%%%%%%%%%%%
-  \begin{subfigure}[c]{1.0\textwidth}
-    \begin{mathpar}
-      \inferrule[t-var]{X : \kappa \in \Gamma}
-                       {\Gamma \vdash X : \kappa}
-
-      \inferrule[t-conv]{\Gamma \vdash T : \kappa \\ \betaeq{|\kappa|}{|\kappa'|}}
-                        {\Gamma \vdash T : \kappa'}
-      \\
-      \inferrule[tt-pi]{\Gamma \vdash T : \star \\ \Gamma, x : T \vdash T' : \star}
-                       {\Gamma \vdash \Pia{x}{T}{T'} : \star}
-
-      \inferrule[kt-pi]{\Gamma \vdash \kappa \\ \Gamma, X : \kappa \vdash T : \star}
-                       {\Gamma \vdash \Pia{X}{\kappa}{T} : \star}
-      \\
-      \inferrule[tk-abs]{\Gamma \vdash \Pia{x}{T}{\kappa} \\ \Gamma, x : T \vdash T' : \kappa}
-                        {\Gamma \vdash \tlam{x}{T}{T'} : \Pia{x}{T}{\kappa}}
-
-      \inferrule[kk-abs]{\Gamma \vdash \Pia{X}{\kappa}{\kappa'} \\ \Gamma, X : \kappa \vdash T : \kappa'}
-                        {\Gamma \vdash \tlam{X}{\kappa}{T} : \Pia{X}{\kappa}{\kappa'}}
-      \\
-      \inferrule[tk-app]{\Gamma \vdash T : \Pia{x}{R}{\kappa} \\ \Gamma \vdash t : R}
-                        {\Gamma \vdash T\ t : \subst{t}{x}{\kappa}}
-
-      \inferrule[kk-app]{\Gamma \vdash T : \Pia{X}{\kappa}{\kappa'} \\ \Gamma \vdash T' : \kappa}
-                        {\Gamma \vdash T\ T' : \subst{T'}{X}{\kappa'}}
-    \end{mathpar}
-    \caption{Kinding}
-  \end{subfigure}
-  %%%%%%%%%%%%%%%%%%%%
-  \begin{subfigure}[c]{1.0\textwidth}
-    \begin{mathpar}
-      \inferrule[var]{x : T \in \Gamma}
-                     {\Gamma \vdash x : T}
-
-      \inferrule[conv]{\Gamma \vdash t : T \\ \betaeq{|T|}{|T'|}}
-                      {\Gamma \vdash t : T'}
-      \\
-      \inferrule[tt-abs]{\Gamma \vdash \Pia{x}{T}{T'} : \star \\ \Gamma, x : T \vdash t : T'}
-                        {\Gamma \vdash \tlam{x}{T}{t} : \Pia{x}{T}{T'}}
-
-      \inferrule[kt-abs]{\Gamma \vdash \Pia{X}{\kappa}{T} : \star \\ \Gamma, X : \kappa \vdash t : T}
-                       {\Gamma \vdash \tlam{X}{\kappa}{t} : \Pia{X}{\kappa}{T}}
-      \\
-      \inferrule[app]{\Gamma \vdash t : \Pia{x}{T}{T'} \\ \Gamma \vdash t' : T}
-                        {\Gamma \vdash t\ t' : \subst{t'}{x}{T'}}
-
-      \inferrule[t-app]{\Gamma \vdash t : \Pia{x}{\kappa}{T'} \\ \Gamma \vdash T : \kappa}
-                        {\Gamma \vdash t\ T : \subst{T}{x}{T'}}
-    \end{mathpar}
-    \caption{Typing}
-    \label{fig:tc-atm}
-  \end{subfigure}
-  %%%%%%%%%%%%%%%%%%%%
-  \caption{Typing Derivations for CC}
-  \label{fig:tc}
-\end{figure}
-
-\begin{figure}
-  \[
-  \begin{array}{lll}
-    |\star| & = & \star \\
-    |\Pia{x}{T}{\kappa}| & = & \Pia{x}{|T|}{|\kappa|} \\
-    |\Pia{x}{\kappa}{\kappa'}| & = & \Pia{x}{|\kappa|}{|\kappa'|} \\
-    |X| & = & X \\
-    |\Pia{x}{T}{T'}| & = & \Pia{x}{|T|}{|T'} \\
-    |\tlam{x}{T}{T'}| & = & \tlam{x}{|T|}{|T'|} \\
-    |T\ t| & = & |T|\ |t| \\
-    |T\ T'| & = & |T|\ |T'| \\
-    |t \simeq t'| & = & |t| \simeq |t'| \\
-    |x| & = & x \\
-    |\tlam{x}{T}{t}| & = & \lam{x}{|t|} \\
-    |\tlam{X}{\kappa}{t}| & = & |t| \\
-    |t\ t'| & = & |t|\ |t'| \\
-    |t\ T| & = & |t| 
-  \end{array}
-  \]
-  \caption{Erasing annotations from terms, types, and kinds of CC}
-  \label{fig:erase}
-\end{figure}
-
-\begin{figure}
-\begin{mathpar}
-    \inferrule[conv-ttbeta]{\ }{(\tlam{x}{T}{T'})\ t \leadsto^* [t/x]T'}
-    
-    \inferrule[conv-ktbeta]{\ }{(\tlam{X}{\kappa}{T'})\ T \leadsto^* [T/X]T'}
-
-\\ \\
-
-    \inferrule[conv-red]{e \leadsto^* e'}{e =_\beta e'}
-
-    \inferrule[conv-sym]{e =_\beta e'}{e' =_\beta e}
-
-    \inferrule[conv-subst]{e_1 =_\beta e_2}{[e_1/x]e =_\beta [e_2/x]e}
-
-\end{mathpar}
-  \caption{Reduction for type-level $\beta$-redexes, and conversion}
-  \label{fig:convcc}
-\end{figure}
-
-\subsection{Enumerated types}
-
-We extend the syntax of CC defined in Figure~\ref{fig:ccsyn} above, with the following additions:
-\[
-\begin{array}{lllll}
-  \textit{Labels} & \ni & l &\ &\ \\
-  \textit{Ty} & \ni & R,S,T & ::= & \ldots\ |\ \{ l_1, \ldots, l_k \}\ |\ \{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} \\
-  \textit{Tm} & \ni & r,s,t & ::= & \ldots\ |\ l\ |\ \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k \mapsto t_k \}
-\end{array}
-\]
-\noindent Then type-level reduction is extended:
-\[
-\{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} \ l_i \ \leadsto\ T_i\ \ \textnormal{if } i \in [1,k]
-\]
-\noindent Typing and kinding are extended in Figure~\ref{fig:enumtp}.
-Label-matching functions at the term level are dependently typed: in
-the \textsc{match} rule, the return type of the function is allowed to
-depend on the input label $x$.  We do not have a similar dependency
-for label-matching functions at the type level, because CC does not
-have kind-level $\lambda$-abstractions.
-
-\begin{figure}
-  \begin{mathpar}
-    \inferrule[enum]{\ }{\Gamma \vdash \{l_1,\ldots,l_k \} : \star}
-
-    \inferrule[t-match]{\all{i\in[1,k]}{\Gamma\vdash T_i : \kappa}}
-                       { \{ l_1 \mapsto T_1\ ;\ \ldots\ ;\ l_k \mapsto T_k \} :  \{ l_1, \ldots, l_k \} \to \kappa}
-  
-    \inferrule[match]{\all{i\in[1,k]}{\Gamma\vdash t_i : T\ l_i}}
-              { \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k \mapsto t_k \} :  \Pia{x}{\{ l_1, \ldots, l_k \}}{T\ x}}
-  \end{mathpar}
-\caption{Typing and kinding for enumerated types}
-\label{fig:enumtp}
-\end{figure}
-
-
-
-\subsection{W-types}
-
-To give types to the W-structures described in
-Section~\ref{sec:wstruct} above, Bend uses a form of W-types,
-introduced by Martin-L\"of~\cite{Mar84} (see also the exposition
-in~\cite{mlttprog}).  Our syntax is further extended as so:
-\[
-\begin{array}{lllll}
-  \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \w{L}{N}{R} 
-\end{array}
-\]
-\noindent This new primitive type form is meant to abstract
-W-structures $\ctor{s}{n}{f}$, where (to recall) $s$ is a selector
-indicating which constructor is used, $n$ is the nonrecursive data,
-and $f$ is a function returning subdata.  To type such a construction,
-we clearly need:
-\begin{itemize}
-\item a type $S$ for the selector $s$
-\item a type constructor $N$ where $N\ s$ is the type for the nonrecursive data
-\item a type constructor $R$ where $R\ s$ is the type for inputs to the function $f$
-\end{itemize}
-\noindent $N$ and $R$ are type constructors (that is, functions returning types), because
-we need to describe the types for each possible selector $s$.  So given $s$, we need
-to know what the type will be for nonrecursive data.
-In the case of the recursive subdata, only the input type of $f$ needs to be specified, because the output
-type is determined already: given an index (like the natural number $i$ selecting the $i$'th smaller
-ordinal for a \textit{Limit}), $f$ returns a piece of subdata, which recursively
-has the W-type again.  The proposed syntax is $\w{S}{N}{R}$.
-
-Following the above discussion, $\w{S}{N}{R}$ should have kind $\star$
-(so it is a type) assuming
-\begin{itemize}
-\item $S$ has kind $\star$
-\item $N$ and $R$ both have kind $S \to \star$
-\end{itemize}
-
-\noindent If one wanted to ensure that the top-level syntactic form of an expression
-determined whether that expression is a term, type, or kind, then it would be necessary
-to pick a slightly different syntax, maybe $\wb{S}{N}{R}$ or (if one avoids Unicode) $\wc{S}{N}{R}$.
-In my opinion, it is rather nicer just to reuse the term syntax, if possible, the way
-Haskell does for tuples as values and tuple types (for example, $(\textit{True},\textit{"hi"}) : (\textit{Bool},\textit{String})$).
-
-The typing rule for W-types as just described would then be:
-\[
-\infer{ \Gamma \vdash \w{S}{N}{R} : \star}{\Gamma \vdash S : \star & \Gamma \vdash N : S \to \star  & \Gamma \vdash R : S \to \star }
-\]
-\noindent This records exactly the same information as in the informal
-description: the three premises just say what we wrote above, that $S$
-has kind $\star$ ($S : \star$), and so forth.  
-
-\subsubsection{Typing rule for W-structures}
-
-Now let us see the typing rule for constructions $\ctor{s}{n}{f}$.  For this
-to have a W-type of the form $\w{S}{N}{R}$ we were just discussing, what has
-to be true?
-
-\begin{itemize}
-\item The selector $s$ certainly has to have the type $S$.
-\item The nonrecursive data $n$ should have the type $N\ s$ that
-  the type constructor says should be there if the selector is $s$.
-\item The function $f$ needs to take in a value of type $R\ s$,
-  because this is the type for indices into the collection of subdata,
-  and such an index is what $f$ expects as input. It should return a
-  result of the W-type, namely the subdata for the given index.
-\end{itemize}
-
-Formalizing these ideas, we get the following typing rule:
-\[
-\infer{\Gamma \vdash \ctor{s}{n}{f} : \w{S}{N}{R}}
-      {\Gamma \vdash s : S & \Gamma \vdash n : N\ s & \Gamma \vdash f : R\ s \to \w{S}{N}{R}}
-      \]
-      
-\subsubsection{Typing rule for recursion}
-
-A recursion $\wrec{r}{t}$ takes in a function $R$ and a value $t$ of the W-type.
-Recalling the computation rule will help us understand what the typing of a recursion
-should be:
-\[
-\wrec{r}{\ctor{s}{n}{f}} \ \ = \ \ R\ s\ n\ f\ (\lam{x}{\wrec{r}{(f\ x)}})
-\]
-\noindent We know from the typing rule for constructions that for some $S$, $N$, and $R$, we will have
-\[
-\begin{array}{lll}
-  s & : & S \\
-  n & : & N\ s \\
-  f & : & R\ s \to \w{S}{N}{R}
-\end{array}
-\]
-\noindent Since $R$ takes in those inputs on the right-hand side of the computation rule,
-we know that the type of $R$ must look like:
-\[
-\Pia{s}{S}{\Pia{n}{N\ s}{\Pia{f}{R\ s \to \w{S}{N}{R}}{\cdots}}}
-\]
-\noindent We just need to fill in the missing part of this type.  We expect that
-the recursion is going to compute a value of some type constructor $C$ which might
-be a function of the input value $\ctor{s}{n}{f}$.  So $C$ will have kind
-\[
-\w{S}{N}{R} \to \star
-\]
-\noindent This is similar to how a recursion on natural numbers $n$ can compute a value of type $P\ n$,
-which is used, for example, when reasoning by induction on $n$.  Now what type will the final (fourth)
-input of $R$ on the right-hand side of the computation rule have?  That input is
-\[
-\lam{x}{\wrec{r}{(f\ x)}}
-\]
-\noindent It is taking in a value of type $R\ s$, just as the subdata function $f$ does.  And it returns
-a value of type $C$ (since it is recursing).  $C$ depends on the input to the recursion, so in this case,
-since $f\ x$ is the input, the result of the recursion will have type $C\ (f\ x)$.  This means that the
-type for $\lam{x}{\wrec{r}{(f\ x)}}$ is
-\[
-\Pia{x}{R\ s}{C\ (f\ x)}
-\]
-\noindent Putting all this together, the type of $R$ should be:
-\[
-\begin{array}{l}
-  \Pia{s}{S}{\ }\\
-  \Pia{n}{N\ s}{\ }\\
-  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ } \\
-  (\Pia{x}{R\ s}{C\ (f\ x)}) \to \\
-  C\ \ctor{s}{n}{f}
-  \end{array}
-\]
-\noindent Finally, the type of $\wrec{r}{d}$ is $C\ d$.  So if we think of $\wrec{r}{d}$
-as a proof by induction, it is saying that to prove a property $C$ of some value $d$ of
-type $\w{S}{N}{R}$, it is sufficent to assume
-
-\begin{itemize}
-\item $s : S$
-\item $n : N\ s$
-\item $f:R\ s \to \w{S}{N}{R}$
-\end{itemize}
-
-\noindent and show $C\ \ctor{s}{n}{f}$, assuming for induction hypothesis
-\[
-\Pia{x}{R\ s}{C\ (f\ x)}
-\]
-\noindent That type expresses that $C$ holds for all the subdata that $f$ can produce.
-
-Putting this all into one rather indigestible rule, we have:
-\[
-\infer{\Gamma \vdash \wrec{r}{d} : C\ d}
-      {
-        \begin{array}{lll}
-\Gamma \vdash S : & \star \\
-\Gamma \vdash N : & S \to \star \\
-\Gamma \vdash R : & R \to \star \\          
-\Gamma \vdash r : & \Pia{s}{S}{\ }  \\
-\ &  \Pia{n}{N\ s}{\ }  \\
-\ &  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ }  \\
-\ &  (\Pia{x}{R\ s}{C\ (f\ x)}) \to  \\
-\ &  C\ \ctor{s}{n}{f} \\
-\Gamma\vdash d : & \w{S}{R}{R}
-        \end{array} }
-      \]
-
-
-
-\subsection{An extensional equality type}
-
-We continue our extension of the syntax of types and type-annotated terms with the following additions:
-\[
-\begin{array}{lllll}
-  \textit{Ty} & \ni & R,S,T & ::= & \cdots\ |\ \eqtm{t}{T}{t'} \\
-  \textit{Tm} & \ni & r,s,t & ::= & \cdots\ |\ \rfl{t}\ |\ \cng{x}{T}{t}{t'}\ |\ \ext{t}
-\end{array}
-\]
-\noindent The type $\eqtm{t}{T}{t'}$ expresses extensional equality of
-terms $t$ and $t'$ at type $T$.  Syntactically, it binds more tightly
-than $\Pi$, so an expression like $\Pia{x}{T}{\eqtm{s}{T'}{t}}$ should
-be parsed as $\Pia{x}{T}{(\eqtm{s}{T'}{t})}$.  The new term constructs
-are for inference rules about this equality: reflexivity ($\rfl{t}$),
-congruence ($\cng{x}{T}{t}{t'}$), and extensionality ($\ext{t}$).  
-
-The typing and kinding rules are shown in
-Figure~\ref{fig:eqtp}.  The first rule states that $\rfl{t}$ proves
-that $t$ equals itself at its type.  The second rule, for typing
-terms of the form $\cng{x}{T}{s}{t}$, allows us
-to change the type of some term $t$ by replacing chosen occurrences
-of $t_1$ with $t_2$, when we have a proof $s$ that $t_1$ and $t_2$
-are equal at type $T'$.  The occurrences to be replaced are indicated
-using a variable $x$ to show where in some type $T$ the occurrences
-of $t_1$ are to be exchanged for $t_2$.  That variable $x$ has to
-have the same type $T'$ for typing $T$, otherwise $T$ might be using
-$t_1$ and $t_2$ at different types than the ones for which they are
-proved equal.  For example, if we prove that $t_1$ equals $t_2$ at type
-$\textit{False} \to T$, where $\textit{False}$ is uninhabited, then
-we are not allowed to replace $t_1$ except at that same type.  Otherwise
-we could unsoundly change $t_1$ to $t_2$ that is not equivalent at the
-type where it is used.
-
-The last three rules are for typing uses $\ext{t}$ of extensionality.
-Two of them express the idea that if functions are equal for all
-inputs, then they are equal at function type.  There is one rule for
-equality of term inputs, and another for equality of type inputs.
-Since we work in a Curry-style theory, the premise of the rule for
-equality of type inputs just requires that $t_1$ equals $t_2$, because
-in Curry-style type theory, we do not apply terms to type arguments.
-Church-style type theory would have had $\Gamma \vdash t :
-\Pia{X}{\kappa}{\eqtm{t_1\ X}{T}{t_2\ X}}$ instead.  The very last
-rule of the figure expresses extensionality for equality types
-themselves, by stating that all proofs of equality are themselves
-equal: $t_1$ and $t_2$ are both proofs of some equation
-$\eqtm{r}{T}{s}$, then they are equal at that type.  It should be
-noted that this principle is incompatible with Homotopy Type Theory,
-which leaves open the possibility of other proofs of equalities
-besides just reflexivity~\cite{hottbook}.  If desired, the axiom could
-be omitted.
-
-Finally, we extend the erasure function to the new term constructs
-for equality, as follows:
-\[
-\begin{array}{lll}
-  |\rfl{t}| & = & \lam{x}{x} \\
-  |\cng{x}{T}{s}{t}| & = & |t| \\
-  |\ext{t}| & = & |t|
-\end{array}
-\]
-\noindent The critical point here is that when equality proofs are
-used to change the type of a term, with the $\cng{x}{T}{s}{t}$
-construct, the proof $s$ of the equality is discarded by erasure.
-This makes a huge difference in working with terms where equality
-proofs are used to change the types of subterms, because in
-Church-style type theory, one can end up with stuck coercions: an
-equality proof is being used to change the type of some subterm, but
-it ends up blocking reduction or reasoning about the term.  This can
-happen if the equality proof either is an assumption (i.e., a
-variable) or derived from one.  One could have a stuck coercion around
-a $\lambda$-abstraction, for example, that is being applied to an
-argument.  The coercion would block the $\beta$-reduction step,
-because it is in between the function and the argument.  With the
-proposed approach, however, the equality proofs are all erased, and
-such stuck terms do not arise.
-
-
-\begin{figure}
-  \[
-  \begin{array}{lll}
-    \infer{\Gamma\vdash\eqtm{s}{T}{t} : \star}{\Gamma\vdash s : T & \Gamma\vdash t : T}
-    &\ &
-\infer{\Gamma\vdash\rfl{t} : \eqtm{t}{T}{t}}{\Gamma\vdash t : T}
-\\\\    
-\infer{\Gamma\vdash\cng{x}{T}{s}{t} : [t_2/x]T}
-          {\Gamma\vdash s : \eqtm{t_1}{T'}{t_2} & \Gamma \vdash t : [t_1/x]T & \Gamma,x:T'\vdash T : \star}
-    &\ &
-    \infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\Pia{x}{T'}{T})}{t_2}}{\Gamma \vdash t : \Pia{x}{T'}{\eqtm{t_1\ x}{T}{t_2\ x}}}
-\\ \\
-\infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\Pia{X}{\kappa}{T})}{t_2}}{\Gamma \vdash t : \Pia{X}{\kappa}{\eqtm{t_1}{T}{t_2}}}
-&\ &
-\infer{\Gamma\vdash\ext{t} : \eqtm{t_1}{(\eqtm{r}{T}{s})}{t_2}}{\Gamma\vdash t_1 : \eqtm{r}{T}{s} & \Gamma\vdash t_2 : \eqtm{r}{T}{s}}
-    \end{array}
-  \]
-\caption{Typing and kinding rules for equality}
-\label{fig:eqtp}
-  \end{figure}
-  
-\section{Examples}
-
-%% for the example above of \verb|Lim| for ordinals, the
-%% name would be a natural number $i$, and the subdata would be the
-%% $i$'th ordinal contained in that limit ordinal.  Let us write
-%% $\ctor{l}{f}$ for this construction with label $l$ and function $f$.
-%% So it is effectively a pair, but the second argument is always a
-%% function.
-
-
-\subsection{Symmetry and transitivity of equality}
-
-
-
-\section{Metatheory of Bend's programming language}
-\label{sec:opmeta}
-
-\section{Metatheory of Bend's type system}
-\label{sec:ttmeta}
 
 \bibliographystyle{plain}
 \bibliography{main}

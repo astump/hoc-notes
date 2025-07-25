@@ -1,6 +1,6 @@
-bend-type-theory.pdf:	bend-type-theory.tex definitions.tex
-	pdflatex bend-type-theory.tex
-	bibtex bend-type-theory
-	pdflatex bend-type-theory.tex
-	pdflatex bend-type-theory.tex
+q.pdf:	q.tex definitions.tex
+	pdflatex q.tex
+	bibtex q
+	pdflatex q.tex
+	pdflatex q.tex
 
