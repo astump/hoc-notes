@@ -83,8 +83,7 @@ should be mentioned for comparison:
   are type-free, and typing comes second.  In fact, the slogan I propose
   for this style of type theory is ``Computation First'' (because we
   first explain what type-free programs are and how they execute, and
-  only afterwards use types to describe their properties).  The great
-  computer scientist Jean-Louis Krivine puts it simply: ``types can
+  only afterwards use types to describe their properties).  Krivine puts it simply: ``types can
   be thought of as properties of $\lambda$-terms''~\cite[page 43]{krivine93}.
 \end{enumerate}
 
@@ -94,13 +93,13 @@ Computation First''.  The idea is similar to Curry-style type theory,
 where one first defines type-free programs, and how they compute.  But
 differently, these programs are designed so that they are guaranteed
 to terminate, without reference to any notion of typing.  Just the
-structure of the programs and the rules for how the execute are
+structure of the programs and the rules for how they execute are
 sufficient to establish that all programs terminate.  Giving a
 detailed proof of that fact is still not trivial, but expected to be
 much simpler than the approaches based on typing.  And then one has a
 lot of freedom to design a type system on top of the terminating
-type-free language.  Now the only requirement is that the language
-should have the usual type-safety property that ones expects of any
+type-free language.  The only requirement is that the language should
+have the usual type-safety property that one expects of any
 statically typed programming language. This is vastly easier to
 achieve than crafting a type system that enforces termination.  It
 also opens the door to making use of exotic typing features that might
@@ -109,7 +108,7 @@ the structure of untyped terms, we are free to adopt such types
 without losing logical soundness.
 
 This paper gives a particular example of this approach, in the form of
-a type theory we dub Q.  The untyped substrate of the theory is based
+a type theory called Q.  The untyped substrate of the theory is based
 on affine lambda calculus plus an affine-compatible form of
 W-structures (the untyped components of W-types).  There are two other
 design goals we pursue in this particular design: minimality and very
@@ -117,10 +116,10 @@ expressive typing.  We aim to have a core language with a small number
 of primitive operations, and similarly for the type system.
 Furthermore, to demonstrate the power of the approach, we include the
 principle known as ``Type : Type'', which renders the type system very
-expressive, but is usually avoided because with this feature, the type
-system cannot enforce termination.  We emphasize that in our setting,
-the type system does not need to do this, because we ensure
-termination for the underlying language, without typing.
+expressive, but is usually avoided because it does not enforce
+termination.  We emphasize that in our setting, the type system does
+not need to do that, because termination for the underlying language
+is ensured prior to typing.
 
 \section{The untyped language of Q}
 
@@ -159,6 +158,36 @@ applied to label $l_i$.
 \caption{The syntax of Q's untyped language.  In $\lambda$-abstractions, the variable $x$ is allowed
   to occur at most once in the body $s$}
 \label{fig:pl}
+\end{figure}
+
+\section{Typed Q}
+
+Having considered the untyped language for Q, we now consider typing.  The approach we describe
+is a form of Curry-style typing, and so the essential matter is to describe types and which
+untyped terms have which types.  But we present the typing relation on annotated terms, so
+that there is a clear path to implementing the theory.  Without annotations, deciding if a
+given term has a given type is undecidable, as the type theory subsumes System F~\cite{wells99}.
+But the annotations can all be erased, resulting in an untyped term in the syntax of Figure~\ref{fig:pl}.
+
+The syntax of types is in Figure~\ref{fig:tp}, the typing rules are in Figure~\ref{fig:typing}, and erasure
+is defined in Figure~\ref{fig:erase}.  To keep notation simpler with labels, typing assumes a label context
+$\mathcal{L}$, which is a partition (i.e., set of disjoint sets $L_i$) of a finite set of labels.  Each disjoint
+set $L_i$ serves as an association of labels, so that when a term contains label $l \in L_i$, we assign
+the type $\{l_1,\ldots,l_k\}$ listing the elements of $L_i$ in some fixed total order $<$ on labels.
+
+\begin{figure}
+  \[
+  \begin{array}{llll}
+    \textit{Types} & T & ::= & \Pia{x}{T}{T'}\ |\ \star\ |\ T\ T'\ |\ \tlam{x}{T}{T'}\ |\ \w{L}{N}{S}\ |\ \{ l_1 , \ldots , l_k \}\
+    |\ \eqtm{e}{T}{e'} \\
+    \textit{Annotated terms} & M, N & ::= & x\ |\ l\ |\ \tlam{x}{T}{M}\ |\ M\ e\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
+    \ &\ &\ & \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \} \\
+
+    \textit{Expressions} & e & ::= & t\ |\ M\ |\ T
+  \end{array}
+  \]
+\caption{Types and annotated terms of Q}
+\label{fig:tp}
 \end{figure}
 
 
