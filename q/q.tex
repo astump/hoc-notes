@@ -151,7 +151,7 @@ applied to label $l_i$.
   \begin{array}{llll}
     \textit{Variables}  & x,y,z,\ldots & \ &\ \\
     \textit{Labels}  & l & \ &\ \\ 
-    \textit{Terms} & s,r,t & ::= & x\ |\ i\ |\ l\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
+    \textit{Terms} & s,r,t & ::= & x\ |\ l\ |\ \lam{x}{s}\ |\ t\ t'\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
     \ &\ &\ & \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \}
   \end{array}
 \]
@@ -168,26 +168,82 @@ untyped terms have which types.  But we present the typing relation on annotated
 that there is a clear path to implementing the theory.  Without annotations, deciding if a
 given term has a given type is undecidable, as the type theory subsumes System F~\cite{wells99}.
 But the annotations can all be erased, resulting in an untyped term in the syntax of Figure~\ref{fig:pl}.
+We adopt a single syntactic category of expressions, containing both term and type constructs.
+This avoids duplicating constructions like $\lambda$-abstractions at the term and type levels.
 
-The syntax of types is in Figure~\ref{fig:tp}, the typing rules are in Figure~\ref{fig:typing}, and erasure
-is defined in Figure~\ref{fig:erase}.  To keep notation simpler with labels, typing assumes a label context
-$\mathcal{L}$, which is a partition (i.e., set of disjoint sets $L_i$) of a finite set of labels.  Each disjoint
-set $L_i$ serves as an association of labels, so that when a term contains label $l \in L_i$, we assign
-the type $\{l_1,\ldots,l_k\}$ listing the elements of $L_i$ in some fixed total order $<$ on labels.
+The syntax of expressions is in Figure~\ref{fig:syn}, the typing rules
+are in Figure~\ref{fig:tp}, and erasure is defined in
+Figure~\ref{fig:erase}.  We write $l \in L$ to indicate that label $l$ occurs in the list $L$ of labels.
 
 \begin{figure}
   \[
   \begin{array}{llll}
-    \textit{Types} & T & ::= & \Pia{x}{T}{T'}\ |\ \star\ |\ T\ T'\ |\ \tlam{x}{T}{T'}\ |\ \w{L}{N}{S}\ |\ \{ l_1 , \ldots , l_k \}\
-    |\ \eqtm{e}{T}{e'} \\
-    \textit{Annotated terms} & M, N & ::= & x\ |\ l\ |\ \tlam{x}{T}{M}\ |\ M\ e\ |\ \wunit\ |\ \ctor{l}{n}{r}\ |\ \wrec{r}{t} \\
-    \ &\ &\ & \{ l_1 \mapsto t_1\ ;\ \ldots\ ;\ l_k\mapsto t_k \} \\
-
-    \textit{Expressions} & e & ::= & t\ |\ M\ |\ T
+    \textit{Label lists} & L & ::= & l_1,\ldots,l_k \\ 
+    \textit{Annotated terms} & \textit{all meta-variables but } L & ::= & \star\ |\ x\ |\ \Pia{x}{T}{T'}\ |\  \tlam{x}{T}{M}\ |\ M\ N\ |\\
+    \ &\ &\ & \inj{L}{l}\ |\ \{ L \}\ |\ \{ l_1 \mapsto M_1\ ;\ \ldots\ ;\ l_k\mapsto M_k \} \ | \\
+    \ &\ &\ & \rfl{M}\ |\ \cng{x}{T}{M}{M'}\ |\ \ext{M}\ |\ \eqtm{M}{T}{M'} \ | \\
+    \ &\ &\ & \wunit\ |\ \ctor{s}{n}{f}\ |\ \wrec{r}{t}\ |\ \w{L}{N}{S}
   \end{array}
   \]
-\caption{Types and annotated terms of Q}
-\label{fig:tp}
+\caption{Annotated terms of Q}
+\label{fig:syn}
+\end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lllll}
+    \infer{\Gamma \vdash x : T}{\Gamma(x) = T}
+    &\ &
+    \infer{\Gamma \vdash \star : \star}{\ }
+    \\ \\
+    \infer{\Gamma \vdash \Pia{x}{T}{T'} : \star}{\Gamma \vdash T : \star & \Gamma , x : T \vdash T' : \star}
+    &\ &
+    \infer{\Gamma \vdash \tlam{x}{T}{M} : \Pia{x}{T}{T'}}{\Gamma \vdash T : \star & \Gamma , x : T \vdash M : T'}
+    \\ \\
+    \infer{\Gamma \vdash M\ N : [N/x]T}{\Gamma \vdash M : \Pia{x}{T'}{T} & \Gamma  \vdash N : T'}
+    &\ &\ 
+    \infer{\Gamma \vdash \inj{L}{l} : L}{l \in L }
+    \\ \\
+    \infer{\Gamma\vdash \{ L \} : \star}{\ }
+    &\ &
+\infer{\Gamma\vdash \{ l_1 \mapsto M_1\ ;\ \ldots\ ;\ l_k\mapsto M_k \} : \Pia{x}{\{ l_1, \ldots, l_k \}}{T\ x}}
+          {\all{i\in\{1,\ldots,k\}}{\Gamma \vdash M_i : T\ l_i}}
+    \\ \\
+    \infer{\Gamma \vdash \rfl{M} : \eqtm{M}{T}{M}}{\Gamma \vdash M : T}
+    &\ &
+    \infer{\Gamma \vdash \cng{x}{T}{M}{M'} : [M_2/x]T}
+          {\begin{array}{l}\Gamma \vdash M : \eqtm{M_1}{T'}{M_2} \\ \Gamma , x : T' \vdash T : \hat{T} \\ \Gamma \vdash M' : [M_1/x]T
+          \end{array}}
+\\ \\
+          \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{\Pia{x}{T}{T'}}{M_2}}{\Gamma \vdash M : \Pia{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
+    &\ &
+          \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{(\eqtm{M_a}{T}{M_b})}{M_2}}
+                {\begin{array}{l}\Gamma \vdash M_1 :\eqtm{M_a}{T}{M_b} \\ \Gamma \vdash M_2 : \eqtm{M_a}{T}{M_b} \end{array}}
+\\ \\ 
+          \infer{\Gamma\vdash \wunit : \wunit}{\ }
+          &\ &
+\infer{ \Gamma \vdash \w{S}{N}{R} : \star}{\begin{array}{l}\Gamma \vdash S : \star \\ \Gamma \vdash N : S \to \star \\ \Gamma \vdash R : S \to \star \end{array}}
+          \\ \\ 
+\infer{\Gamma \vdash \ctor{s}{n}{f} : \w{S}{N}{R}}
+      {\begin{array}{l}\Gamma \vdash s : S \\ \Gamma \vdash n : N\ s \\ \Gamma \vdash f : R\ s \to \w{S}{N}{R}\end{array}}
+      &\ &
+\infer{\Gamma \vdash \wrec{r}{d} : C\ d}
+      {
+        \begin{array}{lll}
+\Gamma \vdash S : & \star \\
+\Gamma \vdash N : & S \to \star \\
+\Gamma \vdash R : & R \to \star \\          
+\Gamma \vdash r : & \Pia{s}{S}{\ }  \\
+\ &  \Pia{n}{N\ s}{\ }  \\
+\ &  \Pia{f}{R\ s \to \w{S}{N}{R}}{\ }  \\
+\ &  (\Pia{x}{R\ s}{C\ (f\ x)}) \to  \\
+\ &  C\ \ctor{s}{n}{f} \\
+\Gamma\vdash d : & \w{S}{R}{R}
+        \end{array} }
+  \end{array}
+  \]
+  \label{Typing rules of Q}
+  \label{fig:tp}
 \end{figure}
 
 
