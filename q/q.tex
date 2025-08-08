@@ -174,6 +174,37 @@ This avoids duplicating constructions like $\lambda$-abstractions at the term an
 The syntax of expressions is in Figure~\ref{fig:syn}, the typing rules
 are in Figure~\ref{fig:tp}, and erasure is defined in
 Figure~\ref{fig:erase}.  We write $l \in L$ to indicate that label $l$ occurs in the list $L$ of labels.
+The term constructs fall into several groups, some of which we will explain in more detail below:
+\begin{itemize}
+\item Constructs from pure dependent type theory:
+  \begin{itemize}
+  \item $\star$, the type for types
+  \item variables $x$
+  \item dependent function types $\Pia{x}{T}{T'}$
+  \item anonymous functions $\tlam{x}{T}{M}$, and
+  \item function calls $M\ N$.
+  \end{itemize}
+\item constructs for labels:
+  \begin{itemize}
+  \item $\inj{L}{l}$ to show into which label type $\{ L \}$ the label $l \in L$ should be injected
+  \item label types $\{ L \}$
+  \item label matchings $\{ l_1 \mapsto M_1\ ;\ \ldots\ ;\ l_k\mapsto M_k \}$
+  \end{itemize}
+\item constructs for typed extensional equality:
+  \begin{itemize}
+  \item $\rfl{M}$ a proof of reflexivity
+  \item $\cng{x}{T}{M}{M'}$ a substitution principle, allowing to replace a term by an equal one in a type
+  \item $\ext{M}$ an extensionality principle
+  \item $\eqtm{M}{T}{M'}$ expressing that $M$ and $M'$ are equal at type $T$
+  \end{itemize}
+\item constructs for W-structures:
+  \begin{itemize}
+  \item $\wunit$, a trivial value
+  \item $\ctor{s}{n}{f}$, a W-structure
+  \item $\wrec{r}{t}$, a recursion over a W-structure
+  \item $\w{L}{N}{S}$, a W-type
+  \end{itemize}
+\end{itemize}
 
 \begin{figure}
   \[
@@ -242,7 +273,7 @@ Figure~\ref{fig:erase}.  We write $l \in L$ to indicate that label $l$ occurs in
         \end{array} }
   \end{array}
   \]
-  \label{Typing rules of Q}
+  \caption{Typing rules of Q}
   \label{fig:tp}
 \end{figure}
 
