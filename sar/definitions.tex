@@ -1,0 +1,48 @@
+\newcommand{\interp}[1]{\llbracket #1 \rrbracket}
+\newcommand{\rinterp}[1]{\llparenthesis #1 \rrparenthesis}
+\newcommand{\lft}[1]{\llceil #1 \rrceil}
+\newcommand{\gprj}[1]{| #1 |}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{notation}[theorem]{Notation}
+\theoremstyle{definition}
+\newtheorem{example}{Example}[section]
+\newtheorem{remark}{Remark}[section]
+\newcommand{\lftcc}[0]{$\lft{\texttt{CC}}$\xspace}
+\newcommand{\infcc}[0]{$\texttt{CC}_\infty$\xspace}
+\newcommand{\Pia}[3]{\Pi\, #1: #2\, .\, #3}
+\newcommand{\Pik}[4]{\Pi\, #1\langle #2 \rangle : #3\, .\, #4}
+\newcommand{\tlamk}[4]{\lambda\, #1 \langle #2 \rangle : #3\, .\, #4}
+\newcommand{\tthk}[4]{\theta\, #1 \langle #2 \rangle : #3\, .\, #4}
+\newcommand{\appk}[2]{#1 \langle #2 \rangle}
+\newcommand{\all}[2]{\forall\, #1\,.\, #2}
+\newcommand{\alll}[3]{\forall^{#1}\, #2\,.\, #3}
+\newcommand{\lam}[2]{\lambda\, #1\, .\, #2}
+\newcommand{\tlam}[3]{\lambda\, #1 : #2\, .\, #3}
+\newcommand{\capl}[0]{\stackrel{\cdot}{\cap}}
+\newcommand{\ltl}[0]{\lambda 2^{\mathcal{L}}}
+\newcommand{\tth}[3]{\theta\, #1 : #2\, .\, #3}
+\newcommand{\univ}[0]{\mathcal{U}}
+\newcommand{\subst}[3]{[#1 / #2] #3}
+\newcommand{\betaeq}[2]{#1 \mathop{=_{\beta}} #2}
+\renewcommand{\DefTirName}[1]{\hbox {\small \hypertarget{#1}{\LeftTirNameStyle{#1}}}}
+\newcommand{\RefTirName}[1]{\hyperlink{#1}{\TirName {#1}}}
+\newcommand{\reftc}[1]{\RefTirName{#1}}
+\newcommand{\wrec}[2]{#1\ \bullet\ #2}
+\newcommand{\ctor}[3]{[ #1 , #2, #3 ]}
+\newcommand{\wunit}[0]{\langle\rangle}
+
+\newcommand{\sar}[0]{SAR\xspace}
+\newcommand{\eqtm}[3]{#2\{#1 \mathrel{\operatorname{=}} #3\}}
+\newcommand{\rfl}[1]{\epsilon\ #1}
+\newcommand{\cng}[4]{\rho\, [#1\,.\,#2]\ #3 - #4}
+\newcommand{\ext}[1]{\xi\, #1}
+
+\newcommand{\rrec}[0]{\mathsf{R}_{\textit{Nat}}}
+\newcommand{\w}[3]{\langle #1 , #2 , #3 \rangle}
+\newcommand{\wb}[3]{\ll #1 , #2 , #3 \gg} 
+\newcommand{\wc}[3]{\langle| #1 , #2 , #3 |\rangle}
+
+\newcommand{\inj}[2]{\iota_#1\ #2}
