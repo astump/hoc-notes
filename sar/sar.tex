@@ -29,7 +29,7 @@
 Constructive type theories based on the Curry-Howard isomorphism
 enforce logical soundness by ensuring that all programs are uniformly
 terminating.  Proofs are identified with programs, and diverging
-programs would constitute proofs of any proposition.  So these must be
+programs would thus prove arbitrary propositions.  So these must be
 ruled out statically.  The approach adopted in systems like Coq, Agda,
 and Lean is to enforce termination through a combination of typing
 and syntactic checks for structural decrease at recursive calls.
@@ -39,9 +39,9 @@ through syntactic checks alone, prior to typing.  The approach has the
 drawback that programs must be significantly restricted in order to
 guarantee termination without any reference to types.  There is a
 notable benefit, however: the type system is now no longer required to
-enforce termination.  This greatly increases the options for typing,
-which now needs only to satisfy type safety, as required in
-Programming Languages.
+enforce termination.  This greatly increases the options for the
+typing relation, which now needs only to satisfy type safety, as
+required in Programming Languages.
 
 We present a language \sar, which combines an untyped affine lambda
 calculus with a form of structural recursion.  With no further
@@ -65,11 +65,129 @@ demonstrate this, we consider a dependent type system called Typed
 
 \section{Previous work on termination with affine recursion}
 
+Affine lambda calculus restricts $\lambda$-abstractions so that the
+$\lambda$-bound variable may occur at most once in the body of the
+abstraction.  With this restriction, $\beta$-reduction is easily seen
+to be terminating, as the number of applications decreases by at least
+one with every $\beta$-step.
+
+\begin{figure}
+  \[
+  \begin{array}{llll}
+    \textit{Terms} & t & ::= & x\ |\ \lam{x}{t}\ |\ t\ t'\ |\ \mathsf{Nil}\ |\ \mathsf{Cons}\ t_1\ t_2\ |\ \mathsf{R}\ t_1\ t_2\ t_3
+  \end{array}
+  \]
+  \caption{The syntax of untyped terms}
+\label{fig:syn}
+\end{figure}
+
+But affine lambda calculus seems too restrictive for regular
+programming.  For example, Church-encoded data such as natural numbers
+and lists are not affine in general.  So we consider expanding the
+language with some form of inductive datatype, and its structural
+recursor.  For simplicity, in this paper we just consider a datatype of lists, with its
+recursor.  The syntax is shown in Figure~\ref{fig:syn}, and its reduction semantics in Figure~\ref{fig:redsem}.
+
+\begin{figure}
+  \[
+  \begin{array}{llll}
+    (\lam{x}{t})\ t' & \leadsto & [t'/x]t \\
+    \mathsf{R}\ \mathsf{Nil}\ t_1\ t_2 & \leadsto & t_2 \\
+    \mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2 & \leadsto & t_1\ t_a\ t_b\ (\mathsf{R}\ t_b\ t_1\ t_2)
+  \end{array}
+  \]
+  \caption{Reduction semantics for \sar}
+\label{fig:redsem}
+\end{figure}
+
+\noindent Without some further restriction, this language is
+easily seen to allow diverging terms.  Let us see an example, adapted
+from~\cite{alves10}.  Define
+\begin{eqnarray*}
+  \textit{app}_t & = & \lam{y}{y\ t} \\
+  \textit{apply} & = & \lam{a}{\lam{b}{a\ b}} \\
+\end{eqnarray*}
+\noindent where $\textit{app}_t$ is schematic in meta-variable $t$. Then we have this reduction sequence, for any term $t$:
+\[
+\begin{array}{ll}
+  \textit{app}_t\ (\textit{app}_t\ \textit{apply}) & \leadsto^2 \\
+  \textit{app}_t\ (\lam{b}{t\ b}) & \leadsto^2 \\
+  t\ t& \
+  \end{array}
+\]
+\noindent The example is easier to complete with an iterator, defined as
+\[
+\textit{It} = \lam{n}{\lam{f}{\lam{x}{\mathsf{R}\ n\ (\lam{q}{\lam{r}{f}})\ x}}}
+\]
+\noindent This uses \textsf{R} to repeat the function $f$, but dropping the head
+and tail of the list that \textsf{R} supplies to its second argument in case the first is a \textsf{Cons}.  Using \textit{It}, define
+\begin{eqnarray*}
+\textit{T} & = & \mathsf{Cons}\ u\ (\mathsf{Cons}\ u\ \mathsf{Nil}) \\
+\Delta & = & \lam{x}{\textit{It}\ T\ \textit{app}_x\ \textit{apply}}
+\end{eqnarray*}
+
+\noindent \textit{T} is a list of length two, and applying \textit{It} with it
+will lead to two nested calls.  So we have
+\[
+\begin{array}{ll}
+  \textit{It}\ s\ \textit{app}_x\ \textit{apply} & \leadsto^+ \\
+  \textit{app}_x\ (\textit{app}_x\ \textit{apply}) & \leadsto^+ \\
+  x\ x& \
+\end{array}
+\]
+\noindent So the term $\Omega = \Delta\ \Delta$ is not normalizing, 
+because $\Delta$ reduces to $\lam{x}{x\ x}$.
+
+This example is not so surprising, since the reduction rule for
+\textsf{R} is (at the meta-level) not affine.  What is more surprising
+is that the example still is diverging if one adopts what Alves et al.
+call the ``closed at reduction'' restriction on the reduction
+rules for \textsf{R}:
+  \[
+  \begin{array}{lllll}
+    \mathsf{R}\ \mathsf{Nil}\ t_1\ t_2 & \leadsto & t_2, & \textnormal{if } \textit{FV}(t_1) = \emptyset\\
+    \mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2 & \leadsto & t_1\ t_a\ t_b\ (\mathsf{R}\ t_b\ t_1\ t_2),& \textnormal{if } \textit{FV}(t_1) = \emptyset
+  \end{array}
+  \]
+\noindent With the ``closed at reduction'' restriction, the former
+reduction sequence is not available.  But we still have this one:
+\[
+\begin{array}{ll}
+  \Delta\ \Delta & \leadsto \\
+  \textit{It}\ T\ \textit{app}_\Delta\ \textit{apply} & \leadsto^+ \\
+  \textit{app}_\Delta\ (\textit{app}_\Delta\ \textit{apply}) & \leadsto^+ \\
+  \Delta\ \Delta& \
+\end{array}
+\]
+\noindent showing that $\Omega$ diverges.
+
+Alves et al. observe that if one goes even further and restricts the
+syntax so that $\mathsf{R}\ t\ t_1\ t_2$ is only syntactically allowed
+if $t_1$ is closed, then the language is indeed terminating.  They
+call this the ``closed at construction'' restriction.  It
+significantly reduces the computational power of the language: only
+the primitive recursive functions are definable~\cite{alves10}.
+
+While limiting oneself to primitive recursive functions may be a
+concern for theoretical applications, it is not a concern for
+practical programming, where the primitive recursive functions already
+encompass computations far beyond the feasible.  But ``closed at construction''
+does have a serious practical drawback: it prevents the usual higher-order
+combinators one expects in functional programming.  For example, using the
+unrestricted syntax, we may define a \texttt{map} function on lists:
+\[
+\texttt{map} = \lam{f}{\lam{x}{\mathsf{R}\ x\ (\lam{h}{\lam{t}{\lam{r}{\mathsf{Cons}\ (f\ t)\ r}}})\ \mathsf{Nil}}}
+\]
+\noindent Here, \textsf{R} is used to recurse through list $x$,
+applying $f$ to the head $h$ of each sublist.  But the term performing
+that application has $f$ free.  So this program, along with many
+others from usual functional programming practice, will be disallowed
+by affine lambda calculus with ``closed at construction'' recursion.
+
 \section{Schematic affine recursion}
 
 \section{Typing without termination}
 
-\bibliographystyle{plain}
-\bibliography{main}
+\bibliographystyle{plain} \bibliography{main}
 
 \end{document}
