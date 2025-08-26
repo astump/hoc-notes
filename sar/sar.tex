@@ -96,7 +96,7 @@ recursor.  The syntax is shown in Figure~\ref{fig:syn}, and its reduction semant
     \mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2 & \leadsto & t_1\ t_a\ t_b\ (\mathsf{R}\ t_b\ t_1\ t_2)
   \end{array}
   \]
-  \caption{Reduction semantics for \sar}
+  \caption{Reduction semantics}
 \label{fig:redsem}
 \end{figure}
 
@@ -185,6 +185,72 @@ others from usual functional programming practice, will be disallowed
 by affine lambda calculus with ``closed at construction'' recursion.
 
 \section{Schematic affine recursion}
+
+We can address this difficulty by applying a basic idea that one finds
+in both Logic and Programming Languages, namely the use of schematic
+constructions.  For the definition of Peano Arithmetic in first-order
+logic, one postulates a \emph{scheme} of induction.  This is a
+meta-level formulation representing an infinite set of axioms, each
+one expressing the induction principle for proving $\all{x}{\phi}$
+from base and step cases.  This is in contrast to second-order logic,
+where a single axiom suffices, by quantifying, within the logic, over
+the formula $\phi$.  In contrast, the first-order scheme of induction
+is a meta-level quantification, outside the logic, over $\phi$.
+
+We can use this same method here to recover generic programming while
+respecting the ``closed at construction'' requirement.  We extend the
+syntax of Figure~\ref{fig:syn} to allow top-level schematic
+definitions of terms.  This is shown in Figure~\ref{fig:sarsyn}.
+Schematic terms have the same syntax as terms above, except
+for the addition of the construct $\mathbf{f}[\bar{t}]$.  Here,
+$\bar{t}$ is a (finite) vector of schematic terms, and $\mathbf{f}$ is
+a defined symbol.  Figure~\ref{fig:sarwf} defines a relation $\textit{Wf}$
+on lists of definitions, imposing these requirements:
+\begin{itemize}
+\item The defined symbols occurring on the right-hand side of a definition
+  are defined earlier in the list, with
+  the same number of schematic variables $\bar{u}$ as the arguments $\bar{t}$
+  where that symbol is applied.
+\item In applications $\mathbf{f}[\bar{t}]$, the terms $\bar{t}$ are
+  all required to be closed, which means that they have no free variables
+  except for schematic ones.  Those will only be instantiated by closed
+  terms, so they may stand for such in applications of defined symbols.
+\item The term $t_1$ in a recursion $\mathsf{R}\ t_1\ t_2\ t_3$ is
+  required to be closed.
+  \end{itemize}
+
+\begin{figure}
+  \[
+  \begin{array}{llll}
+   \textit{Defined symbols} & \mathbb{f} & \ &\ \\
+   \textit{Schematic variables} & u & \ &\ \\
+    \textit{Definitions} & D & ::= & \mathbf{f}[\bar{u}] = t \\
+    \textit{Schematic terms} & t & ::= & x\ |\ u\ |\ \mathbf{f}[\bar{t}]\ |\ \lam{x}{t}\ |\ t\ t'\ |\\
+    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ t_1\ t_2\ |\ \mathsf{R}\ t_1\ t_2\ t_3 \\
+    \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
+  \end{array}
+  \]
+  \caption{Syntax of \sar}
+\label{fig:sarsyn}
+\end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lll}
+    \infer{\textit{Wf}\ \cdot}{\ } &
+    \infer{\textit{Wf}\ (\Delta,\ D)}{\textit{Wf}\ Delta & \Delta \vdash \textit{Wf}\ D}
+    &\
+    \\ \\
+    \infer{\Delta\vdash\textit{Wf}\ \ \mathbf{f}[\bar{u}] = t}
+          {\Delta; \bar{u}\vdash\textit{Closed}\ t} &
+    \infer{\Delta; \bar{u}\vdash\textit{Closed}\ u }{u \in \{\bar{u}\}} &
+\           
+  \end{array}
+  \]
+  \caption{Well-formedness of lists of definitions}
+\label{fig:wf}
+\end{figure}
+
 
 \section{Typing without termination}
 
