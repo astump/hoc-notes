@@ -218,11 +218,34 @@ on lists of definitions, imposing these requirements:
 \item The term $t_1$ in a recursion $\mathsf{R}\ t_1\ t_2\ t_3$ is
   required to be closed.
   \end{itemize}
+These requirements are imposed using the following relations:
+\begin{itemize}
+\item $\textit{Wf}\ \Delta$ expresses that the list $\Delta$ of
+  schematic definitions is well-formed, in the sense that
+each definition in $\Delta$ is well-formed with respect to the definitions
+to the left of it in $\Delta$.
+\item The relation $\Delta \vdash \textit{Wf}\ D$ expresses
+  that definition $D$ is well-formed with respect to $\Delta$.  This requires, for definition
+  $\mathbf{f}[\bar{u}] = t$, that the body $t$ of the
+  definition is closed with respect to the parameters $\bar{u}$, and
+  (for simplicity) that $\mathbf{f}$ is not declared already in $\Delta$.
+\item The relation $\Delta; \bar{u}\ |\ \bar{x} \vdash
+  \textit{Closed}\ t$ means that term $t$ is closed with respect to
+  the definitions in $\Delta$ (which are just used to check that
+  defined symbols $\mathbf{f}$ are applied to the correct number of
+  arguments). The parameters $\bar{u}$ are considered closed.  The
+  variables $\bar{x}$ are locally bound outside $t$ and are also
+  considered closed, except that they are dropped in places where
+  terms must not contain any free local variables.  This can be
+  seen where $\bar{x}$ is replaced with $\cdot$ in premises to the
+  rules expressing closedness of $\mathsf{R}$-terms and applications $\mathbf{f}[\bar{t}]$
+  of defined symbols.
+\end{itemize}
 
 \begin{figure}
   \[
   \begin{array}{llll}
-   \textit{Defined symbols} & \mathbb{f} & \ &\ \\
+   \textit{Defined symbols} & \mathbf{f} & \ &\ \\
    \textit{Schematic variables} & u & \ &\ \\
     \textit{Definitions} & D & ::= & \mathbf{f}[\bar{u}] = t \\
     \textit{Schematic terms} & t & ::= & x\ |\ u\ |\ \mathbf{f}[\bar{t}]\ |\ \lam{x}{t}\ |\ t\ t'\ |\\
@@ -238,16 +261,48 @@ on lists of definitions, imposing these requirements:
   \[
   \begin{array}{lll}
     \infer{\textit{Wf}\ \cdot}{\ } &
-    \infer{\textit{Wf}\ (\Delta,\ D)}{\textit{Wf}\ Delta & \Delta \vdash \textit{Wf}\ D}
+    \infer{\textit{Wf}\ (\Delta,\ D)}{\textit{Wf}\ \Delta & \Delta \vdash \textit{Wf}\ D}
     &\
     \\ \\
     \infer{\Delta\vdash\textit{Wf}\ \ \mathbf{f}[\bar{u}] = t}
-          {\Delta; \bar{u}\vdash\textit{Closed}\ t} &
-    \infer{\Delta; \bar{u}\vdash\textit{Closed}\ u }{u \in \{\bar{u}\}} &
-\           
-  \end{array}
+          {\begin{array}{l}
+              \Delta; \bar{u}\ |\ \cdot \vdash\textit{Closed}\ t\\
+          \all{\bar{u}'}{\all{t'}{(\mathbf{f}[\bar{u}'] = t')\not\in \Delta}} \end{array}} &
+    \infer{\Delta; \bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ u }{u \in \{\bar{u}\}} &
+    \infer{\Delta; \bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ x }{x \in \{\bar{x}\}} 
+  \\ \\           
+  \infer{\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ \lam{y}{t}}{\Delta;\bar{u}\ |\ \bar{x},y \vdash\textit{Closed}\ t} &
+  \infer{\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ (t_1\ t_2)}{\begin{array}{l}\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t_1\\
+                                                                                       \Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t_2
+                                                                       \end{array}} &
+  \infer{\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ \mathsf{Nil}}{\ }
+  \\ \\
+  \infer{\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ \mathsf{Cons}\ t_1\ t_2}
+         {\begin{array}{l}\Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t_1\\
+                          \Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t_2
+         \end{array}} &
+  \infer{\Delta;\bar{u}\ |\ \bar{x} \vdash \textit{Closed}\ \mathsf{R}\ t_1\ t_2\ t}
+        {\begin{array}{l}
+         \Delta;\bar{u}\ |\ \cdot \vdash\textit{Closed}\ t_1\\
+         \Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t_2\\
+         \Delta;\bar{u}\ |\ \bar{x} \vdash\textit{Closed}\ t
+         \end{array}}
+   &\infer{\Delta;\bar{u}\ |\ \bar{x}\vdash\textit{Closed}\ \mathbf{f}[\bar{t}]}
+        {\begin{array}{l}
+             (\mathbf{f}[\bar{u}] = t) \in \Delta \\
+            |\bar{u}| = |\bar{t}| \\
+           \Delta;\bar{u}\ |\ \cdot \vdash \textit{Closed}\ \bar{t}
+         \end{array}} 
+\\ \\
+\infer{\Delta;\bar{u}\ |\ \bar{x}\vdash \textit{Closed}\ \cdot}{\ }&
+\infer{\Delta;\bar{u}\ |\ \bar{x}\vdash \textit{Closed}\ (t,\bar{t})}
+  {\begin{array}{l}
+    \Delta;\bar{u}\ |\ \bar{x}\vdash \textit{Closed}\ t \\
+    \Delta;\bar{u}\ |\ \bar{x}\vdash \textit{Closed}\ \bar{t}
+\end{array}}&\ 
+   \end{array}
   \]
-  \caption{Well-formedness of lists of definitions}
+  \caption{Well-formedness of definitions and lists of definitions; closed schematic terms and lists of such terms}
 \label{fig:wf}
 \end{figure}
 
