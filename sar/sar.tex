@@ -176,7 +176,7 @@ does have a serious practical drawback: it prevents the usual higher-order
 combinators one expects in functional programming.  For example, using the
 unrestricted syntax, we may define a \texttt{map} function on lists:
 \[
-\texttt{map} = \lam{f}{\lam{x}{\mathsf{R}\ x\ (\lam{h}{\lam{t}{\lam{r}{\mathsf{Cons}\ (f\ t)\ r}}})\ \mathsf{Nil}}}
+\texttt{map} = \lam{f}{\lam{x}{\mathsf{R}\ x\ (\lam{h}{\lam{t}{\lam{r}{\mathsf{Cons}\ (f\ h)\ r}}})\ \mathsf{Nil}}}
 \]
 \noindent Here, \textsf{R} is used to recurse through list $x$,
 applying $f$ to the head $h$ of each sublist.  But the term performing
@@ -233,13 +233,14 @@ to the left of it in $\Delta$.
   \textit{Closed}\ t$ means that term $t$ is closed with respect to
   the definitions in $\Delta$ (which are just used to check that
   defined symbols $\mathbf{f}$ are applied to the correct number of
-  arguments). The parameters $\bar{u}$ are considered closed.  The
-  variables $\bar{x}$ are locally bound outside $t$ and are also
-  considered closed, except that they are dropped in places where
-  terms must not contain any free local variables.  This can be
-  seen where $\bar{x}$ is replaced with $\cdot$ in premises to the
-  rules expressing closedness of $\mathsf{R}$-terms and applications $\mathbf{f}[\bar{t}]$
-  of defined symbols.
+  arguments), and the parameters $\bar{u}$.  The parameters are
+  considered closed themselves, as are the locally bound variables
+  $\bar{x}$, except that those variables are dropped in premises
+  (of the rules of Figure~\ref{fig:wf}) where
+  terms must not contain any free local variables.  This can be seen
+  where $\bar{x}$ is replaced with $\cdot$ in premises to the rules
+  expressing closedness of $\mathsf{R}$-terms and applications
+  $\mathbf{f}[\bar{t}]$ of defined symbols.
 \end{itemize}
 
 \begin{figure}
@@ -305,6 +306,26 @@ to the left of it in $\Delta$.
   \caption{Well-formedness of definitions and lists of definitions; closed schematic terms and lists of such terms}
 \label{fig:wf}
 \end{figure}
+
+\subsection{Example}
+
+We may define higher-order functions like \texttt{map} using a schematic definition:
+\[
+\texttt{map}[f] = \lam{x}{\mathsf{R}\ x\ (\lam{h}{\lam{t}{\lam{r}{\mathsf{Cons}\ (f\ h)\ r}}})\ \mathsf{Nil}}
+\]
+\noindent Call this definition $D_{\texttt{map}}$.  We have $\textit{Wf}\ D_{\texttt{map}}$, because the
+body of the definition, namely
+\[
+\mathsf{R}\ x\ (\lam{h}{\lam{t}{\lam{r}{\mathsf{Cons}\ (f\ h)\ r}}})\ \mathsf{Nil}
+\]
+\noindent is closed with respect the parameter $f$.  Being closed
+means that the term iterated by \textsf{R} should have no free
+variables, but may use the parameter $f$, as indeed it does.
+
+\subsection{Reduction}
+
+
+
 
 
 \section{Typing without termination}
