@@ -6,13 +6,11 @@
 \usepackage{proof}
 \usepackage{stmaryrd}
 \usepackage{xspace}
-%\usepackage{MnSymbol}
 \usepackage{parskip}
 \usepackage{fullpage}
-\usepackage{mathpartir}
-\usepackage{subcaption}
 \usepackage{float}
 
+\setlength{\topsep}{1em}
 
 \begin{document}
 
@@ -64,6 +62,7 @@ demonstrate this, we consider a dependent type system called Typed
 \sar, with the ``\textit{Type} : \textit{Type}'' principle.
 
 \section{Previous work on termination with affine recursion}
+\label{sec:prevaff}
 
 Affine lambda calculus restricts $\lambda$-abstractions so that the
 $\lambda$-bound variable may occur at most once in the body of the
@@ -90,7 +89,7 @@ recursor.  The syntax is shown in Figure~\ref{fig:syn}, and its reduction semant
 
 \begin{figure}
   \[
-  \begin{array}{llll}
+  \begin{array}{lll}
     (\lam{x}{t})\ t' & \leadsto & [t'/x]t \\
     \mathsf{R}\ \mathsf{Nil}\ t_1\ t_2 & \leadsto & t_2 \\
     \mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2 & \leadsto & t_1\ t_a\ t_b\ (\mathsf{R}\ t_b\ t_1\ t_2)
@@ -123,7 +122,7 @@ from~\cite{alves10}.  Define
 and tail of the list that \textsf{R} supplies to its second argument in case the first is a \textsf{Cons}.  Using \textit{It}, define
 \begin{eqnarray*}
 \textit{T} & = & \mathsf{Cons}\ u\ (\mathsf{Cons}\ u\ \mathsf{Nil}) \\
-\Delta & = & \lam{x}{\textit{It}\ T\ \textit{app}_x\ \textit{apply}}
+\delta & = & \lam{x}{\textit{It}\ T\ \textit{app}_x\ \textit{apply}}
 \end{eqnarray*}
 
 \noindent \textit{T} is a list of length two, and applying \textit{It} with it
@@ -135,8 +134,8 @@ will lead to two nested calls.  So we have
   x\ x& \
 \end{array}
 \]
-\noindent So the term $\Omega = \Delta\ \Delta$ is not normalizing, 
-because $\Delta$ reduces to $\lam{x}{x\ x}$.
+\noindent So the term $\Omega = \delta\ \delta$ is not normalizing, 
+because $\delta$ reduces to $\lam{x}{x\ x}$.
 
 This example is not so surprising, since the reduction rule for
 \textsf{R} is (at the meta-level) not affine.  What is more surprising
@@ -153,10 +152,10 @@ rules for \textsf{R}:
 reduction sequence is not available.  But we still have this one:
 \[
 \begin{array}{ll}
-  \Delta\ \Delta & \leadsto \\
-  \textit{It}\ T\ \textit{app}_\Delta\ \textit{apply} & \leadsto^+ \\
-  \textit{app}_\Delta\ (\textit{app}_\Delta\ \textit{apply}) & \leadsto^+ \\
-  \Delta\ \Delta& \
+  \delta\ \delta & \leadsto \\
+  \textit{It}\ T\ \textit{app}_\delta\ \textit{apply} & \leadsto^+ \\
+  \textit{app}_\delta\ (\textit{app}_\delta\ \textit{apply}) & \leadsto^+ \\
+  \delta\ \delta& \
 \end{array}
 \]
 \noindent showing that $\Omega$ diverges.
@@ -320,15 +319,76 @@ body of the definition, namely
 \]
 \noindent is closed with respect the parameter $f$.  Being closed
 means that the term iterated by \textsf{R} should have no free
-variables, but may use the parameter $f$, as indeed it does.
+variables.  Here, this is the term beginning $\lambda\, h$.  It may,
+however, use the parameter $f$, as indeed it does.
+
+It is possible to define the problematic term $\delta$ from
+Section~\ref{sec:prevaff} above, as a schematic term.  We first
+must define \textit{It} schematically:
+\[
+\textit{It}[f] = \lam{n}{\lam{x}{\mathsf{R}\ n\ (\lam{q}{\lam{r}{f}})\ x}}
+\]
+\noindent This is necessary so that the second argument to $\mathsf{R}$ will
+be closed except for parameters (here, \textit{f}).  Note that this definition
+reverses the order of the first two arguments, compared to the definition
+in Section~\ref{sec:prevaff}.  Now using \textit{It},
+we can define $\delta$ schematically, where $T$ is, as above, a list of length two:
+\[
+\delta[u] = \textit{It}[\textit{app}_u]\ T\ \textit{apply}
+\]
+\noindent This is a well-formed definition, because the argument supplied for
+the parameter of \textit{It} is closed with respect to parameter $u$.
+
+So we could define \textit{It} and $\delta$.  What breaks down is the
+definition of $\Omega$ as $\delta\ \delta$.  Here, as $\delta$ is a
+schematic term, it must be supplied with a closed term.  We cannot
+write $\delta[\delta]$ because $\delta$ cannot be used as an argument:
+it is not a closed term, but requires an argument for its parameter.
+So we see that restricting terms to be closed with respect to
+schematic definitions blocks the counterexample above to termination.
 
 \subsection{Reduction}
 
+\begin{figure}
+  \[
+  \begin{array}{llll}
+    (\lam{x}{t})\ t' & \leadsto_\Delta & [t'/x]t &\ \\
+    \mathsf{R}\ \mathsf{Nil}\ t_1\ t_2 & \leadsto_\Delta & t_2 &\ \\
+    \mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2 & \leadsto_\Delta & t_1\ t_a\ t_b\ (\mathsf{R}\ t_b\ t_1\ t_2) &\ \\
+    \mathsf{f}[\bar{t}] & \leadsto_\Delta & [\bar{t}/\bar{u}]t & \textnormal{if }(\mathsf{f}[\bar{u}] = t) \in \Delta \textnormal{ and }
+    |\bar{u}| = |\bar{t}|
+  \end{array}
+  \]
+  \caption{Reduction with respect to definitions}
+  \label{fig:sarred}
+\end{figure}
+
+Figure~\ref{fig:sarred} defines a reduction semantics for terms with
+respect to a list $\Delta$ of definitions.  The rules are the same as in
+Figure~\ref{fig:redsem} above, except that we add the last rule for
+looking up a definition from $\Delta$.  
 
 
+\begin{definition}
+  A term $t$ is a value with respect to a list $\Delta$ of definitions iff $t$ contains no subterms of any of these forms:
+  \begin{itemize}
+  \item $(\lam{x}{t})\ t'$
+  \item $\mathsf{R}\ \mathsf{Nil}\ t_1\ t_2$
+  \item $\mathsf{R}\ (\mathsf{Cons}\ t_a\ t_b)\ t_1\ t_2$
+  \item $\mathsf{f}[\bar{t}]$
+  \end{itemize}
+\end{definition}
+
+
+\begin{theorem}
+  If $\textit{Wf}\ \Delta$ and $\Delta;\cdot\ |\ \cdot \textit{Closed}\ t$,
+  then either there exists $t'$ such that $t \leadsto_\Delta t'$, or
+  $t'$ is a value.
+\end{theorem}
 
 
 \section{Typing without termination}
+
 
 \bibliographystyle{plain} \bibliography{main}
 
