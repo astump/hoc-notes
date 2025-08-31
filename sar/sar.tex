@@ -413,8 +413,6 @@ The syntax of annotated terms for Typed \sar is shown in Figure~\ref{fig:annotm}
 surprisingly, the only additions needed for the syntax are:
 \begin{itemize}
 \item an annotation on $\lambda$-bound variables;
-\item an erased abstraction $\Tlam{x}{M}{N}$, used to introduce a specification variable $x$, which
-  is computationally irrelevant; 
 \item the type $\mathsf{List}$ for lists; and
 \item sort $\star$.
 \end{itemize}
@@ -431,7 +429,7 @@ on $\lambda$-bound variables are there to show which abstraction $N$ should be c
   \[
   \begin{array}{llll}
     \textit{Annotated terms} & M, N & ::= &
-    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\\
+    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ M\ N\ |\\
     \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ M_1\ M_2\ N\ |\ \mathsf{List}\ M\ |\ \star
   \end{array}
   \]
@@ -454,19 +452,18 @@ we may define the length function on lists as a function which simply discards a
 \noindent The type we intend to compute for an annotated version of \texttt{length} is the following,
 where we may define the type \texttt{Nat} of natural numbers to be $\mathsf{List}\ \lam{x}{x}$:
 \[
-\Tlam{A}{\star}{\tlam{x}{\mathsf{List}\ A}{\texttt{Nat}}}
+\tlam{A}{\star}{\tlam{x}{\mathsf{List}\ A}{\texttt{Nat}}}
 \]
-\noindent An erased abstraction is used to introduce the type $A$ into
-the rest of the expression.  The expression can be understood as a
+\noindent This function takes in a type $A$, and then returns a
 function taking in an $x$ of type $\mathsf{List}\ A$ and returning
-\texttt{Nat}, for any type $A$.  Such a function is abstract, as the
+\texttt{Nat}.  Such a function is abstract, as the
 return value is always just \texttt{Nat} for every input, rather than
 some particular (represented) natural number.  If we write $A \to B$ instead
 of $\tlam{x}{A}{B}$ when $x\not\in\textit{FV}(B)$, then the type we will
 give to \texttt{length}
 is:
 \[
-\Tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
+\tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
 \]
 
 \bibliographystyle{plain} \bibliography{main}
