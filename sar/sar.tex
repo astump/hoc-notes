@@ -59,7 +59,7 @@ With termination of \sar established prior to typing, we are free to
 adopt a more exotic type system than possible in other constructive
 type theories, where the burden of termination falls on typing.  To
 demonstrate this, we consider a dependent type system called Typed
-\sar, with the ``\textit{Type} : \textit{Type}'' principle.
+\sar, with the $\star : \star$ principle.
 
 \section{Previous work on termination with affine recursion}
 \label{sec:prevaff}
@@ -103,34 +103,34 @@ recursor.  The syntax is shown in Figure~\ref{fig:syn}, and its reduction semant
 easily seen to allow diverging terms.  Let us see an example, adapted
 from~\cite{alves10}.  Define
 \begin{eqnarray*}
-  \textit{app}_t & = & \lam{y}{y\ t} \\
-  \textit{apply} & = & \lam{a}{\lam{b}{a\ b}} \\
+  \texttt{app}_t & = & \lam{y}{y\ t} \\
+  \texttt{apply} & = & \lam{a}{\lam{b}{a\ b}} \\
 \end{eqnarray*}
-\noindent where $\textit{app}_t$ is schematic in meta-variable $t$. Then we have this reduction sequence, for any term $t$:
+\noindent where $\texttt{app}_t$ is schematic in meta-variable $t$. Then we have this reduction sequence, for any term $t$:
 \[
 \begin{array}{ll}
-  \textit{app}_t\ (\textit{app}_t\ \textit{apply}) & \leadsto^2 \\
-  \textit{app}_t\ (\lam{b}{t\ b}) & \leadsto^2 \\
+  \texttt{app}_t\ (\texttt{app}_t\ \texttt{apply}) & \leadsto^2 \\
+  \texttt{app}_t\ (\lam{b}{t\ b}) & \leadsto^2 \\
   t\ t& \
   \end{array}
 \]
 \noindent The example is easier to complete with an iterator, defined as
 \[
-\textit{It} = \lam{n}{\lam{f}{\lam{x}{\mathsf{R}\ n\ (\lam{q}{\lam{r}{f}})\ x}}}
+\texttt{It} = \lam{n}{\lam{f}{\lam{x}{\mathsf{R}\ n\ (\lam{q}{\lam{r}{f}})\ x}}}
 \]
 \noindent This uses \textsf{R} to repeat the function $f$, but dropping the head
-and tail of the list that \textsf{R} supplies to its second argument in case the first is a \textsf{Cons}.  Using \textit{It}, define
+and tail of the list that \textsf{R} supplies to its second argument in case the first is a \textsf{Cons}.  Using \texttt{It}, define
 \begin{eqnarray*}
-\textit{T} & = & \mathsf{Cons}\ u\ (\mathsf{Cons}\ u\ \mathsf{Nil}) \\
-\delta & = & \lam{x}{\textit{It}\ T\ \textit{app}_x\ \textit{apply}}
+\texttt{T} & = & \mathsf{Cons}\ u\ (\mathsf{Cons}\ u\ \mathsf{Nil}) \\
+\delta & = & \lam{x}{\texttt{It}\ T\ \texttt{app}_x\ \texttt{apply}}
 \end{eqnarray*}
 
-\noindent \textit{T} is a list of length two, and applying \textit{It} with it
+\noindent \texttt{T} is a list of length two, and applying \texttt{It} with it
 will lead to two nested calls.  So we have
 \[
 \begin{array}{ll}
-  \textit{It}\ s\ \textit{app}_x\ \textit{apply} & \leadsto^+ \\
-  \textit{app}_x\ (\textit{app}_x\ \textit{apply}) & \leadsto^+ \\
+  \texttt{It}\ s\ \texttt{app}_x\ \texttt{apply} & \leadsto^+ \\
+  \texttt{app}_x\ (\texttt{app}_x\ \texttt{apply}) & \leadsto^+ \\
   x\ x& \
 \end{array}
 \]
@@ -153,8 +153,8 @@ reduction sequence is not available.  But we still have this one:
 \[
 \begin{array}{ll}
   \delta\ \delta & \leadsto \\
-  \textit{It}\ T\ \textit{app}_\delta\ \textit{apply} & \leadsto^+ \\
-  \textit{app}_\delta\ (\textit{app}_\delta\ \textit{apply}) & \leadsto^+ \\
+  \texttt{It}\ T\ \texttt{app}_\delta\ \texttt{apply} & \leadsto^+ \\
+  \texttt{app}_\delta\ (\texttt{app}_\delta\ \texttt{apply}) & \leadsto^+ \\
   \delta\ \delta& \
 \end{array}
 \]
@@ -336,7 +336,7 @@ reverses the order of the first two arguments, compared to the definition
 in Section~\ref{sec:prevaff}.  Now using $\mathbf{It}$,
 we can define $\delta$ schematically, where $T$ is, as above, a list of length two:
 \[
-\delta[u] = \mathbf{It}[\textit{app}_u]\ T\ \textit{apply}
+\delta[u] = \mathbf{It}[\texttt{app}_u]\ T\ \texttt{apply}
 \]
 \noindent This is a well-formed definition, because the argument supplied for
 the parameter of $\mathbf{It}$ is closed with respect to parameter $u$.
@@ -404,8 +404,70 @@ Erasing these annotations results in a term of \sar.  We may then require
 both that a term is typable and that its erasure is closed, in the sense
 of the previous section.  This ensures that the term is typable and
 normalizing.  A simple argument then shows that there is an uninhabited
-type, thus proving the theory consistent.
+type, thus proving the theory consistent.  We begin with the syntax
+of annotated terms, including types.
 
+\subsection{Annotated terms}
+
+The syntax of annotated terms for Typed \sar is shown in Figure~\ref{fig:annotm}.  Somewhat
+surprisingly, the only additions needed for the syntax are:
+\begin{itemize}
+\item an annotation on $\lambda$-bound variables;
+\item an erased abstraction $\Tlam{x}{M}{N}$, used to introduce a specification variable $x$, which
+  is computationally irrelevant; 
+\item the type $\mathsf{List}$ for lists; and
+\item sort $\star$.
+\end{itemize}
+\noindent We will view types as abstractions of terms, and hence
+reuse $\lambda$-abstraction to represent an abstraction of a function, as opposed
+to introducing a new binder $\Pi$ for this.  The idea of using just one binder
+for functions and their abstractions has been
+studied previously by Kamareddine~\cite{kamareddine05}.  The typing relation
+should be viewed as an abstraction relation: the proposition $M : N$ will mean that
+$N$ is an abstraction of $M$.  It has discarded some information from $M$.  Annotations
+on $\lambda$-bound variables are there to show which abstraction $N$ should be computed from $M$.
+
+\begin{figure}
+  \[
+  \begin{array}{llll}
+    \textit{Annotated terms} & M, N & ::= &
+    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\\
+    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ M_1\ M_2\ N\ |\ \mathsf{List}\ M\ |\ \star
+  \end{array}
+  \]
+  \caption{Annotated terms of Typed \sar}
+  \label{fig:annotm}
+\end{figure}
+
+To develop an example, let us first recall that we can view natural numbers as lists with trivial data.  So we may define:
+\[
+\begin{array}{lll}
+  \texttt{Zero} & := & \mathsf{Nil} \\
+  \texttt{Suc} & := & \mathsf{Cons}\ (\lam{x}{x})
+\end{array}
+\]
+\noindent Here, we use the identity function as the trivial data stored with each $\mathsf{Cons}$ node.  Then
+we may define the length function on lists as a function which simply discards any data in the list:
+\[
+\texttt{length} := \texttt{map}\ (\lam{h}{\lam{x}{x}})
+\]
+\noindent The type we intend to compute for an annotated version of \texttt{length} is the following,
+where we may define the type \texttt{Nat} of natural numbers to be $\mathsf{List}\ \lam{x}{x}$:
+\[
+\Tlam{A}{\star}{\tlam{x}{\mathsf{List}\ A}{\texttt{Nat}}}
+\]
+\noindent An erased abstraction is used to introduce the type $A$ into
+the rest of the expression.  The expression can be understood as a
+function taking in an $x$ of type $\mathsf{List}\ A$ and returning
+\texttt{Nat}, for any type $A$.  Such a function is abstract, as the
+return value is always just \texttt{Nat} for every input, rather than
+some particular (represented) natural number.  If we write $A \to B$ instead
+of $\tlam{x}{A}{B}$ when $x\not\in\textit{FV}(B)$, then the type we will
+give to \texttt{length}
+is:
+\[
+\Tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
+\]
 
 \bibliographystyle{plain} \bibliography{main}
 
