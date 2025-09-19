@@ -121,8 +121,9 @@ from~\cite{alves10}.  Define
 \noindent This uses \textsf{R} to repeat the function $f$, but dropping the head
 and tail of the list that \textsf{R} supplies to its second argument in case the first is a \textsf{Cons}.  Using \texttt{It}, define
 \begin{eqnarray*}
+\texttt{u} & = & \lam{x}{x} \\
 \texttt{T} & = & \mathsf{Cons}\ u\ (\mathsf{Cons}\ u\ \mathsf{Nil}) \\
-\delta & = & \lam{x}{\texttt{It}\ T\ \texttt{app}_x\ \texttt{apply}}
+\delta & = & \lam{x}{\texttt{It}\ \texttt{T}\ \texttt{app}_x\ \texttt{apply}}
 \end{eqnarray*}
 
 \noindent \texttt{T} is a list of length two, and applying \texttt{It} with it
@@ -153,7 +154,7 @@ reduction sequence is not available.  But we still have this one:
 \[
 \begin{array}{ll}
   \delta\ \delta & \leadsto \\
-  \texttt{It}\ T\ \texttt{app}_\delta\ \texttt{apply} & \leadsto^+ \\
+  \texttt{It}\ \texttt{T}\ \texttt{app}_\delta\ \texttt{apply} & \leadsto^+ \\
   \texttt{app}_\delta\ (\texttt{app}_\delta\ \texttt{apply}) & \leadsto^+ \\
   \delta\ \delta& \
 \end{array}
@@ -249,9 +250,9 @@ to the left of it in $\Delta$.
   \begin{array}{llll}
    \textit{Defined symbols} & \mathbf{f} & \ &\ \\
    \textit{Schematic variables} & u & \ &\ \\
-    \textit{Definitions} & D & ::= & \mathbf{f}[\bar{u}] = t \\
     \textit{Schematic terms} & t & ::= & x\ |\ u\ |\ \mathbf{f}[\bar{t}]\ |\ \lam{x}{t}\ |\ t\ t'\ |\\
     \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ t_1\ t_2\ |\ \mathsf{R}\ t_1\ t_2\ t_3 \\
+    \textit{Definitions} & D & ::= & \mathbf{f}[\bar{u}] = t \\
     \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
   \end{array}
   \]
@@ -332,11 +333,15 @@ must define $\mathbf{It}$ schematically:
 \]
 \noindent This is necessary so that the second argument to $\mathsf{R}$ will
 be closed except for parameters (here, \textit{f}).  Note that this definition
-reverses the order of the first two arguments, compared to the definition
+reverses the order of the first two arguments to \textbf{It}, compared to the definition
 in Section~\ref{sec:prevaff}.  Now using $\mathbf{It}$,
-we can define $\delta$ schematically, where $T$ is, as above, a list of length two:
+we can define $\delta$ schematically, where $\mathbf{T}$ is, as above, a list of length two:
 \[
-\delta[u] = \mathbf{It}[\texttt{app}_u]\ T\ \texttt{apply}
+\begin{array}{lll}
+\mathbf{u} & = & \lam{x}{x} \\
+  \mathbf{T} & = & \mathsf{Cons}\ \mathbf{u}\ (\mathsf{Cons}\ \mathbf{u}\ \mathsf{Nil}) \\
+  \delta[u] & = & \mathbf{It}[\texttt{app}_u]\ \mathbf{T}\ \texttt{apply}
+\end{array}
 \]
 \noindent This is a well-formed definition, because the argument supplied for
 the parameter of $\mathbf{It}$ is closed with respect to parameter $u$.
@@ -404,17 +409,30 @@ Erasing these annotations results in a term of \sar.  We may then require
 both that a term is typable and that its erasure is closed, in the sense
 of the previous section.  This ensures that the term is typable and
 normalizing.  A simple argument then shows that there is an uninhabited
-type, thus proving the theory consistent.  We begin with the syntax
+type, thus proving the theory consistent.
+
+We take a somewhat unconventional view of typing, as a form of
+abstraction.  A type for a term $M$ is some other term $N$ where some
+information has been (deliberately) dropped.  The language features one
+basic abstraction, namely that lists storing values that can be abstracted to $A$
+can themselves be abstracted to $\mathsf{List}\ A$.
+
+We begin with the syntax
 of annotated terms, including types.
 
 \subsection{Annotated terms}
 
-The syntax of annotated terms for Typed \sar is shown in Figure~\ref{fig:annotm}.  Somewhat
-surprisingly, the only additions needed for the syntax are:
+The syntax of annotated terms for Typed \sar is shown in
+Figure~\ref{fig:annotm}. The additions to the syntax
+are:
 \begin{itemize}
 \item an annotation on $\lambda$-bound variables;
-\item the type $\mathsf{List}$ for lists; and
-\item sort $\star$.
+\item a form $\Tlam{x}{A}{B}$ of erased abstraction (where $x$ should not occur free in the erasure of $B$);
+\item the type $\mathsf{List}$ for lists, giving us a basic abstraction; 
+\item an annotation $\selfa{M}$ indicating that $M$ should be abstracted to itself; 
+\item sort $\star$, for a most abstract entity; 
+\item an annotation $\absta{M}$ indicating that $M$ should be abstracted to $\star$; and
+ \item annotations on the parameters to $\bar{u}$ in definitions.
 \end{itemize}
 \noindent We will view types as abstractions of terms, and hence
 reuse $\lambda$-abstraction to represent an abstraction of a function, as opposed
@@ -423,48 +441,99 @@ for functions and their abstractions has been
 studied previously by Kamareddine~\cite{kamareddine05}.  The typing relation
 should be viewed as an abstraction relation: the proposition $M : N$ will mean that
 $N$ is an abstraction of $M$.  It has discarded some information from $M$.  Annotations
-on $\lambda$-bound variables are there to show which abstraction $N$ should be computed from $M$.
+on $\lambda$-bound variables are there to show which abstraction should be required
+for the argument to the function.
 
 \begin{figure}
   \[
   \begin{array}{llll}
     \textit{Annotated terms} & M, N & ::= &
-    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ M\ N\ |\\
-    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ M_1\ M_2\ N\ |\ \mathsf{List}\ M\ |\ \star
+    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\\
+    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ M_1\ M_2\ N\ |\ \mathsf{List}\ M\ |\\
+    \ &\ &\ & \sigma\ M\ |\ \star
+    \textit{Annotated definitions} & D & ::= & \mathbf{f}[u_1:M_1,\cdots,u_k:M_k] = t \\
+    \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
   \end{array}
   \]
   \caption{Annotated terms of Typed \sar}
   \label{fig:annotm}
 \end{figure}
 
-To develop an example, let us first recall that we can view natural numbers as lists with trivial data.  So we may define:
+To develop an example, let us first recall that we can view natural numbers as lists with trivial data.
+Let us write $A \to B$ instead
+of $\tlam{x}{A}{B}$ when $x\not\in\textit{FV}(B)$.  So we may define:
 \[
 \begin{array}{lll}
-  \texttt{Zero} & := & \mathsf{Nil} \\
-  \texttt{Suc} & := & \mathsf{Cons}\ (\lam{x}{x})
+  \mathbf{u} & = & \Tlam{A}{\star}{A \to A} \\
+  \mathbf{Zero} & = & \mathsf{Nil} \\
+  \mathbf{Suc} & = & \mathsf{Cons}\ \mathbf{u}
 \end{array}
 \]
-\noindent Here, we use the identity function as the trivial data stored with each $\mathsf{Cons}$ node.  Then
+\noindent Then
 we may define the length function on lists as a function which simply discards any data in the list:
 \[
-\texttt{length} := \texttt{map}\ (\lam{h}{\lam{x}{x}})
+\mathbf{length} = \Tlam{A}{\star}{\mathbf{map}\ (\tlam{h}{A}{\mathbf{u}})}
 \]
-\noindent The type we intend to compute for an annotated version of \texttt{length} is the following,
-where we may define the type \texttt{Nat} of natural numbers to be $\mathsf{List}\ \lam{x}{x}$:
+\noindent Let us define the type \texttt{Nat} of natural numbers:
 \[
-\tlam{A}{\star}{\tlam{x}{\mathsf{List}\ A}{\texttt{Nat}}}
+\mathbf{Nat} = \mathsf{List}\ \mathbf{u}
 \]
-\noindent This function takes in a type $A$, and then returns a
-function taking in an $x$ of type $\mathsf{List}\ A$ and returning
-\texttt{Nat}.  Such a function is abstract, as the
-return value is always just \texttt{Nat} for every input, rather than
-some particular (represented) natural number.  If we write $A \to B$ instead
-of $\tlam{x}{A}{B}$ when $x\not\in\textit{FV}(B)$, then the type we will
-give to \texttt{length}
-is:
+\noindent The type we intend to compute for an annotated version of \textbf{length} is the following:
 \[
-\tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
+\Tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
 \]
+\noindent This function takes in a type $A$ in erased fashion, and
+returns a function taking in an input of type $\mathsf{List}\ A$ and
+returning \texttt{Nat}.  Such a function is abstract, as the return
+value is always just \texttt{Nat} for every input, rather than some
+particular (represented) natural number.
+
+\subsection{Abstraction rules}
+
+Figure~\ref{fig:abstr} gives the abstraction rules for Typed \sar.  
+
+\begin{figure}
+\[
+\begin{array}{lll}
+  \infer{\Gamma\vdash x : M}{\Gamma(x) = M}
+  &\ &
+  \infer{\Gamma\vdash \selfa{M} : M}{\ }
+  \\ \\
+  \infer{\Gamma\vdash \tau M : \star}{\ }
+  &\ &
+  \infer{\Gamma\vdash \tlam{x}{M}{N} : \tlam{x}{M}{N'}}{\Gamma\vdash N : N'}
+  \\ \\
+  \infer{\Gamma\vdash M\ N: M'\ N'}{\Gamma\vdash M:M' & \Gamma \vdash N:N'}
+  &\ &
+  \infer{\Gamma\vdash \Tlam{x}{M}{N} : \Tlam{x}{M}{N'}}{\Gamma\vdash N : N' & x\not\in\textit{FV}(|N|)}
+  \\ \\
+%  \infer{\Gamma\vdash M\ -N: M'\ -N'}{\Gamma\vdash M:M' & \Gamma \vdash N:N'}
+\ 
+  &\ &
+  \infer{\Gamma\vdash \mathsf{Nil} : \mathsf{List}\ M}{\ }
+\\ \\
+  \infer{\Gamma \vdash M : N}{\Gamma \vdash M : N' & N =_{\beta,\eta} N'}
+  &\ &
+  \infer{\Gamma\vdash \mathsf{Cons} : \Tlam{A}{\star}{A \to \mathsf{List}\ A \to \mathsf{List}\ A}}{\ }
+\end{array}
+\]
+\caption{Abstraction rules for Typed \sar}
+\label{fig:abstr}
+\end{figure}
+
+\subsection{Examples}
+
+\subsubsection{The length function}
+
+Let us confirm that \textbf{length} has the desired type.  The annotated version from above is
+\[
+\mathbf{length} = \Tlam{A}{\star}{\mathbf{map}\ (\tlam{h}{A}{\mathbf{u}})}
+\]
+\noindent Its intended type is
+\[
+\Tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
+\]
+\noindent Using the 
 
 \bibliographystyle{plain} \bibliography{main}
 
