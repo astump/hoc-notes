@@ -404,53 +404,51 @@ The following should be proved in detail to establish the intended consequences 
 
 In this section, we define Typed \sar, which is a typed version of the
 \sar language just presented.  In Typed \sar, we write terms with some
-type annotations.  This makes it possible to compute types for such terms.
-Erasing these annotations results in a term of \sar.  We may then require
-both that a term is typable and that its erasure is closed, in the sense
-of the previous section.  This ensures that the term is typable and
-normalizing.  A simple argument then shows that there is an uninhabited
-type, thus proving the theory consistent.
-
-We take a somewhat unconventional view of typing, as a form of
-abstraction.  A type for a term $M$ is some other term $N$ where some
-information has been (deliberately) dropped.  The language features one
-basic abstraction, namely that lists storing values that can be abstracted to $A$
-can themselves be abstracted to $\mathsf{List}\ A$.
-
-We begin with the syntax
-of annotated terms, including types.
+type annotations.  This makes it possible to compute types for such
+terms.  Erasing these annotations results in a term of \sar.  We may
+then require both that a term is typable and that its erasure is
+closed, in the sense of the previous section.  This ensures that the
+term is typable and normalizing.  A simple argument then shows that
+there is an uninhabited type, thus proving the theory consistent.  We
+begin with the syntax of annotated terms, including types.
 
 \subsection{Annotated terms}
 
 The syntax of annotated terms for Typed \sar is shown in
-Figure~\ref{fig:annotm}. The additions to the syntax
-are:
+Figure~\ref{fig:annotm}.  We add several groups of new notations.
 \begin{itemize}
-\item an annotation on $\lambda$-bound variables;
-\item a form $\Tlam{x}{A}{B}$ of erased abstraction (where $x$ should not occur free in the erasure of $B$);
-\item the type $\mathsf{List}$ for lists, giving us a basic abstraction; 
-\item an annotation $\selfa{M}$ indicating that $M$ should be abstracted to itself; 
-\item sort $\star$, for a most abstract entity; 
-\item an annotation $\absta{M}$ indicating that $M$ should be abstracted to $\star$; and
- \item annotations on the parameters to $\bar{u}$ in definitions.
+\item Constructs from pure dependent type theory:
+  \begin{itemize}
+  \item $\star$, the type for types;
+  \item dependent function types $\Pia{x}{M}{M'}$;
+  \item erased dependent function types $\allt{x}{M}{M'}$, which introduce a variable $x:M$ that
+    may then be used in the body $M'$ without corresponding to an input to a function; and
+  \item erased applications $\appe{M}{N}$, giving an instantiation to a $\forall$-bound variable.
+  \end{itemize}
+\item Constructs for typed extensional equality:
+  \begin{itemize}
+  \item $\rfl{M}$ a proof of reflexivity
+  \item $\cng{x}{T}{M}{M'}$ a substitution principle, allowing to replace a term by an equal one in a type
+  \item $\ext{M}$ an extensionality principle
+  \item $\eqtm{M}{T}{M'}$ expressing that $M$ and $M'$ are equal at type $T$
+  \end{itemize}
+\item Additionally we have:
+\begin{itemize}
+\item annotations on $\lambda$-bound variables;
+\item annotations on the parameters to $\bar{u}$ in definitions; and
+\item the type $\mathsf{List}$ for lists.
 \end{itemize}
-\noindent We will view types as abstractions of terms, and hence
-reuse $\lambda$-abstraction to represent an abstraction of a function, as opposed
-to introducing a new binder $\Pi$ for this.  The idea of using just one binder
-for functions and their abstractions has been
-studied previously by Kamareddine~\cite{kamareddine05}.  The typing relation
-should be viewed as an abstraction relation: the proposition $M : N$ will mean that
-$N$ is an abstraction of $M$.  It has discarded some information from $M$.  Annotations
-on $\lambda$-bound variables are there to show which abstraction should be required
-for the argument to the function.
+\end{itemize}
 
 \begin{figure}
   \[
   \begin{array}{llll}
     \textit{Annotated terms} & M, N & ::= &
-    x\ |\ u\ |\ \mathbf{f}[\bar{M}]\ |\ \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\\
-    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ M_1\ M_2\ N\ |\ \mathsf{List}\ M\ |\\
-    \ &\ &\ & \sigma\ M\ |\ \star
+    x\ |\ u\ |\ \star\ |\ \mathbf{f}[\bar{M}]\ |\\
+    \ &\ &\ & \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\ \appe{M}{N}\\
+    \ &\ &\ & \Pia{x}{M}{N}\ |\ \allt{x}{M}{N}\ |\\    
+    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ |\ \mathsf{List}\ M\ |\\
+    \ &\ &\ & \rfl{M}\ |\ \cng{x}{T}{M}{M'}\ |\ \ext{M}\ |\ \eqtm{M}{T}{M'} \\
     \textit{Annotated definitions} & D & ::= & \mathbf{f}[u_1:M_1,\cdots,u_k:M_k] = t \\
     \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
   \end{array}
@@ -459,67 +457,86 @@ for the argument to the function.
   \label{fig:annotm}
 \end{figure}
 
-To develop an example, let us first recall that we can view natural numbers as lists with trivial data.
-Let us write $A \to B$ instead
-of $\tlam{x}{A}{B}$ when $x\not\in\textit{FV}(B)$.  So we may define:
-\[
-\begin{array}{lll}
-  \mathbf{u} & = & \Tlam{A}{\star}{A \to A} \\
-  \mathbf{Zero} & = & \mathsf{Nil} \\
-  \mathbf{Suc} & = & \mathsf{Cons}\ \mathbf{u}
-\end{array}
-\]
-\noindent Then
-we may define the length function on lists as a function which simply discards any data in the list:
-\[
-\mathbf{length} = \Tlam{A}{\star}{\mathbf{map}\ (\tlam{h}{A}{\mathbf{u}})}
-\]
-\noindent Let us define the type \texttt{Nat} of natural numbers:
-\[
-\mathbf{Nat} = \mathsf{List}\ \mathbf{u}
-\]
-\noindent The type we intend to compute for an annotated version of \textbf{length} is the following:
-\[
-\Tlam{A}{\star}{\mathsf{List}\ A \to \texttt{Nat}}
-\]
-\noindent This function takes in a type $A$ in erased fashion, and
-returns a function taking in an input of type $\mathsf{List}\ A$ and
-returning \texttt{Nat}.  Such a function is abstract, as the return
-value is always just \texttt{Nat} for every input, rather than some
-particular (represented) natural number.
+\subsection{Typing rules}
 
-\subsection{Abstraction rules}
+The typing rules for Typed \sar are listed in several figures: rules for pure dependent type theory
+with $\star : \star$ in Figure~\ref{fig:sartpdep}, types for list constants in Figure~\ref{fig:sartplist},
+and rules for equality in~\ref{fig:sartpeq}.  Let us consider the constructs for equality in more detail.
 
-Figure~\ref{fig:abstr} gives the abstraction rules for Typed \sar.  
+\begin{itemize}
+\item The $\cng{x}{T}{M}{M'}$ construct is used with a proof $M$ that two terms $M_1$ and $M_2$ are
+  equal at some type $T'$.  The $x.T$ part of the construct shows (by occurrence of bound variable $x$)
+  which occurrences of $M_1$ are to
+  be replaced with $M_2$ in the type of $M'$.
+\item The $\ext{M}$ construct is for extensionality.  There are three different typing rules,
+  for applying extensionality at $\Pi$-type, $\forall$-type, or the equality type itself.
+\end{itemize}
 
 \begin{figure}
 \[
 \begin{array}{lll}
   \infer{\Gamma\vdash x : M}{\Gamma(x) = M}
   &\ &
-  \infer{\Gamma\vdash \selfa{M} : M}{\ }
+  \infer{\Gamma\vdash \tlam{x}{M}{N} : \Pia{x}{M}{N'}}{\Gamma,x:M\vdash N : N'}
   \\ \\
-  \infer{\Gamma\vdash \tau M : \star}{\ }
+  \infer{\Gamma\vdash M\ N: [N/x]M'}{\Gamma\vdash M:\Pia{x}{N'}{M'} & \Gamma \vdash N:N'}
   &\ &
-  \infer{\Gamma\vdash \tlam{x}{M}{N} : \tlam{x}{M}{N'}}{\Gamma\vdash N : N'}
+  \infer{\Gamma\vdash \Tlam{x}{M}{N} : \allt{x}{M}{N'}}{\Gamma,x:M\vdash N : N' & x\not\in\textit{FV}(|N|)}
   \\ \\
-  \infer{\Gamma\vdash M\ N: M'\ N'}{\Gamma\vdash M:M' & \Gamma \vdash N:N'}
+  \infer{\Gamma\vdash \appe{M}{N}: [N/x]M'}{\Gamma\vdash M:\allt{x}{N'}{M'} & \Gamma \vdash N:N'}
   &\ &
-  \infer{\Gamma\vdash \Tlam{x}{M}{N} : \Tlam{x}{M}{N'}}{\Gamma\vdash N : N' & x\not\in\textit{FV}(|N|)}
-  \\ \\
-%  \infer{\Gamma\vdash M\ -N: M'\ -N'}{\Gamma\vdash M:M' & \Gamma \vdash N:N'}
-\ 
-  &\ &
-  \infer{\Gamma\vdash \mathsf{Nil} : \mathsf{List}\ M}{\ }
-\\ \\
   \infer{\Gamma \vdash M : N}{\Gamma \vdash M : N' & N =_{\beta,\eta} N'}
-  &\ &
-  \infer{\Gamma\vdash \mathsf{Cons} : \Tlam{A}{\star}{A \to \mathsf{List}\ A \to \mathsf{List}\ A}}{\ }
+  \\ \\
+    \infer{\Gamma \vdash \star : \star}{\ }
+&\ &\ 
 \end{array}
 \]
-\caption{Abstraction rules for Typed \sar}
-\label{fig:abstr}
+\caption{Rules from pure dependent theory}
+\label{fig:sartpdep}
 \end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lll}
+  \mathsf{Nil} & : & \mathsf{List}\ M
+\\
+\mathsf{Cons} & : & \allt{A}{\star}{A \to \mathsf{List}\ A \to \mathsf{List}\ A}
+ \\
+ \mathsf{List} & : & \star \to \star
+ \\
+ \mathsf{R} & : & \allt{A}{\star}{\allt{C}{\mathsf{List}\ A \to \star}{\ }} \\
+   \ &\ &
+   (\Pia{h}{A}{\Pia{t}{\mathsf{List}\ A}{C\ t \to C\ (\appe{\mathsf{Cons}}{A}\ h\ t)}}) \to \\
+   \ &\ &  C\ \mathsf{Nil} \to \\
+   \ &\ & \Pia{x}{\mathsf{List}\ A}{C\ x}
+  \end{array}
+  \]
+\caption{Types for list constants}
+\label{fig:sartplist}
+  \end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lll}
+  \infer{\Gamma \vdash \eqtm{N_1}{M}{N_2} : \star}{\begin{array}{l}\Gamma \vdash M : \star \\ \Gamma \vdash N_1 : M \\ \Gamma \vdash N_2 : M\end{array}}
+  &\ &
+  \infer{\Gamma \vdash \cng{x}{T}{M}{M'} : [M_2/x]T}
+        {\begin{array}{l}\Gamma \vdash M : \eqtm{M_1}{T'}{M_2} \\ \Gamma , x : T' \vdash T : \hat{T} \\ \Gamma \vdash M' : [M_1/x]T
+        \end{array}}
+  \\ \\
+     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{\Pia{x}{T}{T'}}{M_2}}{\Gamma \vdash M : \Pia{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
+    &\ &
+          \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{(\eqtm{M_a}{T}{M_b})}{M_2}}
+                {\begin{array}{l}\Gamma \vdash M_1 :\eqtm{M_a}{T}{M_b} \\ \Gamma \vdash M_2 : \eqtm{M_a}{T}{M_b} \end{array}}
+\\ \\ 
+     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{\allt{x}{T}{T'}}{M_2}}{\Gamma \vdash M : \allt{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
+    &\ & 
+    \infer{\Gamma \vdash \rfl{M} : \eqtm{M}{T}{M}}{\Gamma \vdash M : T}
+\end{array}
+  \]
+  \caption{Rules for equality}
+  \label{fig:sartpeq}
+  \end{figure}
 
 \subsection{Examples}
 
