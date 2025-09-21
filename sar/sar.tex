@@ -185,6 +185,7 @@ others from usual functional programming practice, will be disallowed
 by affine lambda calculus with ``closed at construction'' recursion.
 
 \section{Schematic affine recursion}
+\label{sec:sar}
 
 We can address this difficulty by applying a basic idea that one finds
 in both Logic and Programming Languages, namely the use of schematic
@@ -251,7 +252,7 @@ to the left of it in $\Delta$.
    \textit{Defined symbols} & \mathbf{f} & \ &\ \\
    \textit{Schematic variables} & u & \ &\ \\
     \textit{Schematic terms} & t & ::= & x\ |\ u\ |\ \mathbf{f}[\bar{t}]\ |\ \lam{x}{t}\ |\ t\ t'\ |\\
-    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ t_1\ t_2\ |\ \mathsf{R}\ t_1\ t_2\ t_3 \\
+    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ |\ \mathsf{R} \\
     \textit{Definitions} & D & ::= & \mathbf{f}[\bar{u}] = t \\
     \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
   \end{array}
@@ -443,11 +444,11 @@ Figure~\ref{fig:annotm}.  We add several groups of new notations.
 \begin{figure}
   \[
   \begin{array}{llll}
+    \textit{Constants} & C & ::= &  \mathsf{Nil}\ |\ \mathsf{Cons}\ |\ \mathsf{R}\ |\ \mathsf{List} \\
     \textit{Annotated terms} & M, N & ::= &
-    x\ |\ u\ |\ \star\ |\ \mathbf{f}[\bar{M}]\ |\\
+    x\ |\ u\ |\ C\ |\ \star\ |\ \mathbf{f}[\bar{M}]\ |\\
     \ &\ &\ & \tlam{x}{M}{N}\ |\ \Tlam{x}{M}{N}\ |\ M\ N\ |\ \appe{M}{N}\\
     \ &\ &\ & \Pia{x}{M}{N}\ |\ \allt{x}{M}{N}\ |\\    
-    \ &\ &\ & \mathsf{Nil}\ |\ \mathsf{Cons}\ M\ N\ |\ \mathsf{R}\ |\ \mathsf{List}\ M\ |\\
     \ &\ &\ & \rfl{M}\ |\ \cng{x}{T}{M}{M'}\ |\ \ext{M}\ |\ \eqtm{M}{T}{M'} \\
     \textit{Annotated definitions} & D & ::= & \mathbf{f}[u_1:M_1,\cdots,u_k:M_k] = t \\
     \textit{Lists of definitions} & \Delta & ::= & \cdot \ |\ \Delta, D
@@ -459,18 +460,49 @@ Figure~\ref{fig:annotm}.  We add several groups of new notations.
 
 \subsection{Typing rules}
 
-The typing rules for Typed \sar are listed in several figures: rules for pure dependent type theory
-with $\star : \star$ in Figure~\ref{fig:sartpdep}, types for list constants in Figure~\ref{fig:sartplist},
-and rules for equality in~\ref{fig:sartpeq}.  Let us consider the constructs for equality in more detail.
+The typing rules for Typed \sar are listed in several figures: rules
+for pure dependent type theory with $\star : \star$ in
+Figure~\ref{fig:sartpdep}, types for list constants in
+Figure~\ref{fig:sartplist}, and rules for equality in
+Figure~\ref{fig:sartpeq}.  The conversion rule, labeled $(c)$ in
+Figure~\ref{fig:sartpdep}, references the erasure $|M|$ of terms $M$.
+Erasure is defined in Figure~\ref{fig:erase}.  Its use in the
+conversion rule is what makes this a Curry-style dependent type
+theory, because terms are considered equal regardless of differences
+in their annotations.  Erasure drops the equality proof from uses of
+substitution ($\rho$-terms).  It also drops implicit arguments; i.e.,
+$N$ in $\appe{M}{N}$.  Annotations on bound variables are also
+dropped.  It otherwise proceeds homomorphically throughout terms.
+Note that the erasure of a term might not be a schematic affine term
+in the sense of Section~\ref{sec:sar}, both because the type system
+does not enforce the affine property, and also because erasure might
+not remove some constructs like $\Pi$-types from terms.  While
+$\Pi$-types used as annotations would all be removed, such constructs
+could also appear as arguments in terms.  Those occurrences would not
+be removed by erasure.  If one wanted to enforce that conversion is
+terminating, this point would have to be addressed, either by relaxing
+the notion of affine to permit extra occurrences in constructs like
+$\Pi$-types, or strengthening the notion of erasure to remove all such
+constructs.  For now, we simply do not concern ourselves with
+termination of conversion (as we also do not concern ourselves with
+feasibility of conversion: terminating terms of \sar could still be
+infeasible to normalize).  
+
+Let us consider the constructs for equality, with typing rules in Figure~\ref{fig:sartpeq}, in more detail.
 
 \begin{itemize}
 \item The $\cng{x}{T}{M}{M'}$ construct is used with a proof $M$ that two terms $M_1$ and $M_2$ are
   equal at some type $T'$.  The $x.T$ part of the construct shows (by occurrence of bound variable $x$)
   which occurrences of $M_1$ are to
-  be replaced with $M_2$ in the type of $M'$.
+  be replaced with $M_2$ in the type of $M'$.  The rule requires that $T$ is typable assuming $x : T'$.
+  This is to prevent applying an equality at type $T'$ to replace an occurrence of $M_1$ where that
+  occurrence is being used at a different type (not $T'$).  Since this is Curry-style type theory,
+  the same term could be used at different types, because identity of terms depends on their erasures only.
 \item The $\ext{M}$ construct is for extensionality.  There are three different typing rules,
   for applying extensionality at $\Pi$-type, $\forall$-type, or the equality type itself.
 \end{itemize}
+
+
 
 \begin{figure}
 \[
@@ -485,7 +517,7 @@ and rules for equality in~\ref{fig:sartpeq}.  Let us consider the constructs for
   \\ \\
   \infer{\Gamma\vdash \appe{M}{N}: [N/x]M'}{\Gamma\vdash M:\allt{x}{N'}{M'} & \Gamma \vdash N:N'}
   &\ &
-  \infer{\Gamma \vdash M : N}{\Gamma \vdash M : N' & N =_{\beta,\eta} N'}
+  \infer[(c)]{\Gamma \vdash M : N}{\Gamma \vdash M : N' & |N| =_{\beta,\eta} |N'| & \Gamma\vdash N:\star}
   \\ \\
     \infer{\Gamma \vdash \star : \star}{\ }
 &\ &\ 
@@ -524,19 +556,43 @@ and rules for equality in~\ref{fig:sartpeq}.  Let us consider the constructs for
         {\begin{array}{l}\Gamma \vdash M : \eqtm{M_1}{T'}{M_2} \\ \Gamma , x : T' \vdash T : \hat{T} \\ \Gamma \vdash M' : [M_1/x]T
         \end{array}}
   \\ \\
-     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{\Pia{x}{T}{T'}}{M_2}}{\Gamma \vdash M : \Pia{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
+     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{(\Pia{x}{T}{T'})}{M_2}}{\Gamma \vdash M : \Pia{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
     &\ &
           \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{(\eqtm{M_a}{T}{M_b})}{M_2}}
                 {\begin{array}{l}\Gamma \vdash M_1 :\eqtm{M_a}{T}{M_b} \\ \Gamma \vdash M_2 : \eqtm{M_a}{T}{M_b} \end{array}}
 \\ \\ 
-     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{\allt{x}{T}{T'}}{M_2}}{\Gamma \vdash M : \allt{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
+     \infer{\Gamma \vdash \ext{M} : \eqtm{M_1}{(\allt{x}{T}{T'})}{M_2}}{\Gamma \vdash M : \allt{x}{T}{(\eqtm{M_1\ x}{T'}{M_2\ x})}}
     &\ & 
     \infer{\Gamma \vdash \rfl{M} : \eqtm{M}{T}{M}}{\Gamma \vdash M : T}
+
 \end{array}
   \]
   \caption{Rules for equality}
   \label{fig:sartpeq}
   \end{figure}
+
+\begin{figure}
+  \[
+  \begin{array}{lll}
+    |C| & = & C \\
+    |\star| & = & \star \\
+    |\Pia{x}{M}{M'}| & = & \Pia{x}{|M|}{|M'|} \\
+    |\allt{x}{M}{M'}| & = & \allt{x}{|M|}{|M'|} \\
+    |x| & = & x \\
+    |\appe{M}{N}| & = & |M| \\    
+    |M\ N| & = & |M|\ |N| \\
+    |\tlam{x}{M}{M'}| & = & \lam{x}{|M'|} \\
+    |\Tlam{x}{M}{M'}| & = & |M'| \\
+    |\eqtm{M_1}{M}{M_2}| & = & \eqtm{|M_1|}{|M|}{|M_2|}\\
+    |\rfl{M}| & = & \rfl{|M|} \\
+    |\cng{x}{T}{M}{M'}| & = & |M'| \\
+    |\ext{M}| & = & \ext{|M|}
+  \end{array}
+  \]
+  \caption{Erasing annotations}
+  \label{fig:erase}
+\end{figure}
+
 
 \subsection{Examples}
 
