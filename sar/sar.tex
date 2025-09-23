@@ -403,18 +403,17 @@ The following should be proved in detail to establish the intended consequences 
 
 \subsection{Questions}
 
-\textbf{1. Could \sar use $\lambda$-encodings instead of a built-in recursor?}  The
-usual $\lambda$-encodings like the Church and Parigot encodings represent data
-using non-linear $\lambda$-terms in general.  But the much more exotic
-Lepigre-Rafalli encoding appears to be affine~\cite[Section 7]{jenkins+21}.  See
-also the code here:
-
-\url{https://github.com/cedille/cedille-developments/blob/master/recursive-representation-of-data/lepigre-raffalli/concrete/nat1.ced}
-
-\noindent The duplication necessary for computation is pushed outside of the
-encoding, thus allowing (it seems) the encoding to be affine.  This would
-be quite fantastic, as it would simplify the system tremendously by removing
-the need for a basic list type or, more generally, some form of $W$-types.
+\textbf{1. Could \sar use $\lambda$-encodings instead of a built-in
+  recursor?}  The usual $\lambda$-encodings like the Church and
+Parigot encodings represent data using non-linear $\lambda$-terms in
+general.  The Scott encoding is affine, and even one can derive
+recursion on it in untyped $\lambda$-calculus.  But that derivation,
+which goes through the exotic Lepigre-Rafalli encoding, is
+nonlinear~\cite[Section 7]{jenkins+21}.  So it seems that the only way
+to use $\lambda$-encodings (and gain their benefits for keeping the
+language design concise) would be to impose some additional discipline
+that would allow non-affine terms but restrict them in some different
+way to prevent divergence.  But it is unclear how that would work.
 
 \section{Typing without termination}
 
