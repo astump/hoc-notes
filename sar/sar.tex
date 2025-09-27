@@ -544,7 +544,7 @@ Let us consider the constructs for equality, with typing rules in Figure~\ref{fi
 \begin{figure}
   \[
   \begin{array}{lll}
-  \mathsf{Nil} & : & \mathsf{List}\ M
+  \mathsf{Nil} & : & \allt{A}{\star}{\mathsf{List}\ A}
 \\
 \mathsf{Cons} & : & \allt{A}{\star}{A \to \mathsf{List}\ A \to \mathsf{List}\ A}
  \\
@@ -553,7 +553,7 @@ Let us consider the constructs for equality, with typing rules in Figure~\ref{fi
  \mathsf{R} & : & \allt{A}{\star}{\allt{C}{\mathsf{List}\ A \to \star}{\ }} \\
    \ &\ &
    (\Pia{h}{A}{\Pia{t}{\mathsf{List}\ A}{C\ t \to C\ (\appe{\mathsf{Cons}}{A}\ h\ t)}}) \to \\
-   \ &\ &  C\ \mathsf{Nil} \to \\
+   \ &\ &  C\ (\appe{\mathsf{Nil}}{A}) \to \\
    \ &\ & \Pia{x}{\mathsf{List}\ A}{C\ x}
   \end{array}
   \]
@@ -609,13 +609,37 @@ Let us consider the constructs for equality, with typing rules in Figure~\ref{fi
 
 \subsection{Examples}
 
-In this section, we show somewhat exotic examples that are permitted
-by the type system and whose erasures satisfy the requirements
-of schematic affine recursion.
+In this section, we show examples that are permitted by the type
+system and whose erasures satisfy the requirements of schematic affine
+recursion.
+
+\subsubsection{Basic datatypes}
+
+Let us make the following simple definitions, to have some basic datatypes to use:
+\[
+\begin{array}{lllll}
+  \textbf{False} & : & \star & := & \allt{X}{\star}{X} \\
+  \textbf{Unit} & : & \star & := & \mathsf{List}\ \textbf{False} \\
+  \textbf{Nat} & : & \star & := & \mathsf{List}\ \textbf{Unit}
+\end{array}
+\]
+\noindent Now we may define some terms of these types. Notice that there is just one inhabitant of the \textbf{Unit} type
+in a consistent context,
+because we cannot apply $\appe{\mathsf{Cons}}{\textbf{False}}$ to build any other inhabitant than just $\appe{\mathsf{Nil}}{\textbf{False}}$:
+\[
+\begin{array}{lllll}
+  \textbf{unit} & : & \textbf{Unit} & := & \appe{\mathsf{Nil}}{\textbf{False}} \\
+  \textbf{zero} & : & \textbf{Nat} & := & \appe{\mathsf{Nil}}{\textbf{Unit}} \\
+  \textbf{succ} & : & \textbf{Nat}\to\textbf{Nat} & := & \appe{\mathsf{Cons}}{\textbf{Unit}}\ \textbf{unit} \\
+\end{array}
+\]
 
 \subsubsection{Type-level data structures}
 
-
+Thanks to the $\star : \star$ axiom (Figure~\ref{fig:sartpdep}), we can form lists of types; for example:
+\[
+\appe{\mathsf{Cons}}{\star}\ \textbf{Unit}\ (\appe{\mathsf{Cons}}{\star}\ \textbf{Nat}\ (\appe{\mathsf{Nil}}{\star}))
+\]
 
 \bibliographystyle{plain} \bibliography{main}
 
