@@ -641,6 +641,80 @@ Thanks to the $\star : \star$ axiom (Figure~\ref{fig:sartpdep}), we can form lis
 \appe{\mathsf{Cons}}{\star}\ \textbf{Unit}\ (\appe{\mathsf{Cons}}{\star}\ \textbf{Nat}\ (\appe{\mathsf{Nil}}{\star}))
 \]
 
+\subsubsection{A congruence principle}
+
+As an example of equational reasoning, let us may derive this congruence principle:
+\[
+\begin{array}{lll}
+\textbf{cong} & : & \allt{X}{\star}{\allt{Y}{\star}{\allt{f}{X \to Y}{\allt{x}{X}{\allt{x'}{X}{\ }}}}} \\
+\ &\ &\ \ \ \eqtm{x}{X}{x'} \to \\
+\ &\ &\ \ \ \eqtm{f\ x}{Y}{f\ x'}
+\end{array}
+\]
+\noindent This states that if $x$ equals $x'$, then $f\ x$ equals $f\ x'$. The proof is 
+\[
+\begin{array}{l}
+\Tlam{X}{\star}{\Tlam{Y}{\star}{\Tlam{f}{X \to Y}{\Tlam{x}{X}{\Tlam{x'}{X}{\ }}}}} \\
+\ \ \ \tlam{p}{\eqtm{x}{X}{x'}}{\cng{y}{\eqtm{f\ x}{Y}{f\ y}}{p}{\rfl{(f\ x)}}}
+\end{array}
+\]
+\noindent This works because:
+\begin{itemize}
+\item $\rfl{(f\ x)}$ has type $\eqtm{f\ x}{Y}{f\ x}$
+\item then the $\rho$-term is saying that because $p$ proves $\eqtm{x}{X}{x'}$,
+  we may replace the right occurrence of $x$ in $\eqtm{f\ x}{Y}{f\ x}$ (as derived by $\epsilon$) with $x'$.
+  \end{itemize}
+
+\subsubsection{Inductive reasoning}
+
+Consider these definitions:
+\[
+\begin{array}{lllll}
+  \textbf{id} & : & \allt{X}{\star}{\mathsf{List}\ X \to \mathsf{List}\ X} & := & \Tlam{X}{\star}{\tlam{x}{X}{x}} \\
+  
+  \textbf{rebuild} & : & \allt{X}{\star}{\mathsf{List}\ X \to \mathsf{List}\ X} & := & \Tlam{X}{\star}{\appe{\appe{\mathsf{R}}{X}}{\tlam{x}{\mathsf{List}\ X}{\mathsf{List}\ X}}\ (\appe{\mathsf{Cons}}{X})\ \appe{\mathsf{Nil}}{X}}
+  \end{array}
+\]
+\noindent The \textbf{rebuild} function recursively applies
+$\mathsf{Cons}$ to a list, starting from $\mathsf{Nil}$.  Notice that the instantiation of the variable $C$ in the type of $\mathsf{R}$ is
+the constant constructor
+\[
+\tlam{x}{\mathsf{List}\ X}{\mathsf{List}\ X}
+\]
+\noindent We are using $\mathsf{R}$ for
+(non-dependently typed) computation, and are just trying to compute a
+$\mathsf{List}\ X$.
+
+We can state that \textbf{rebuild} equals
+\textbf{id}, using our extensional equality:
+\[
+\eqtm{\textbf{rebuild}}{(\allt{X}{\star}{\mathsf{List}\ X \to \mathsf{List}\ X})}{\textbf{id}}
+\]
+\noindent The proof of this is $\ext{\ext{\textbf{pf}}}$ where we have
+this type and definition for the inductive $\textbf{pf}$, and helper
+predicate, and writing $\alpha$ as a label, for subsequent reference:
+\[
+\begin{array}{lll}
+  \textbf{pred} & : & \allt{X}{\star}{\mathsf{List}\ X \to \star} = \\
+  \ & \multicolumn{2}{l}{\Tlam{X}{\star}{\tlam{x}{\mathsf{List}\ X}{\eqtm{\appe{\textbf{rebuild}}{X}\ x}{(\mathsf{List}\ X)}{\appe{\textbf{id}}{X}\ x}}}} \\ \\ 
+  \textbf{pf} & : & \allt{X}{\star}{\Pia{x}{X}{\appe{\textbf{pred}}{X}\ x}} = \\
+  \ & \multicolumn{2}{l}{\Tlam{X}{\star}{\tlam{x}{X}{\ }}} \\
+  \ & \multicolumn{2}{l}{\ \ \ \appe{\appe{\mathsf{R}}{X}}{(\appe{\textbf{pred}}{X}\ x)}} \\
+  \ & \multicolumn{2}{l}{\ \ \ \ \ {\ }^\alpha(\tlam{h}{X}{\tlam{t}{\mathsf{List}\ X}}{\tlam{\textit{ih}}{\appe{\textbf{pred}}{X}\ t}}} \\
+  \ & \multicolumn{2}{l}{\ \ \ \ \ \ \ \ \ \appe{\appe{\textbf{cong}}{\mathsf{List}\ X}}{\mathsf{List}\ X}\ (\appe{\mathsf{Cons}}{X}\ h)\ \textit{ih})} \\
+  \ & \multicolumn{2}{l}{\ \ \ \ \ \ \rfl{(\appe{\mathsf{Nil}}{X})}}
+  \end{array}
+\]
+    \noindent The step case of the proof, labeled $\alpha$, uses
+    congruence to go from a proof (namely \textit{ih}) of
+    $\eqtm{\appe{\mathbf{rebuild}}{X}\ t}{\mathsf{List}\ X}{\appe{\mathbf{id}}{X}\ t}$,
+    to a proof of the equality of those same terms except with
+    $\appe{\mathsf{Cons}}{X}\ h$ applied to each.  Those terms are
+    equal to the desired ones, where \textbf{rebuild} and \textbf{id}
+    are applied outside \textsf{Cons} instead of inside, by
+    conversion.
+
+
 \bibliographystyle{plain} \bibliography{main}
 
 \end{document}
